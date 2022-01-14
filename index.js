@@ -2,6 +2,7 @@
 
 
 const { RefreshingAuthProvider, getTokenInfo, exchangeCode } = require('@twurple/auth');
+const { SingleUserPubSubClient } = require('@twurple/pubsub');
 const { ApiClient } = require('@twurple/api');
 
 const express = require('express');
@@ -12,7 +13,9 @@ const { v4: uuidv4 } = require('uuid');
 
 
 /* The scopes to request access for when we authenticate with twitch. */
-const bot_token_scopes = ['bits:read'];
+const bot_token_scopes = ['bits:read',
+                          'channel:read:redemptions',
+                          'channel_subscriptions'];
 
 
 // =============================================================================
@@ -44,6 +47,9 @@ let authProvider = undefined;
  * instance that allows us to make requests on their behalf. */
 let twitchApi = undefined;
 
+/* When the user has authorized their Twitch account, this is set up to be a
+ * PubSub client to allow events for the logged in user to flow. */
+let pubSubClient = undefined;
 
 // =============================================================================
 
@@ -69,7 +75,7 @@ app.get('/auth', (req, res) => {
   const params = {
     client_id: process.env.TWITCHLOYALTY_CLIENT_ID,
     redirect_uri,
-    force_verify: false,
+    force_verify: true,
     response_type: 'code',
     scope: bot_token_scopes.join(' '),
     state
@@ -113,7 +119,7 @@ app.get('/auth/twitch', async (req, res) => {
   if (code !== undefined) {
     // Exchange the code we were given with Twitch to get an access code. This
     // makes a request to the Twitch back end.
-    const accessToken = await exchangeCode(
+    const token = await exchangeCode(
       process.env.TWITCHLOYALTY_CLIENT_ID,
       process.env.TWITCHLOYALTY_CLIENT_SECRET,
       code, redirect_uri);
@@ -129,7 +135,7 @@ app.get('/auth/twitch', async (req, res) => {
           console.log(`Refreshing user token`);
         }
       },
-      accessToken
+      token
     );
 
     twitchApi = new ApiClient({ authProvider });
@@ -157,17 +163,52 @@ app.get('/', async (req, res) => {
   } else {
 
     const userInfo = await twitchApi.users.getMe();
-    const board = await twitchApi.bits.getLeaderboard({
-      count: 100,
-      period: 'all',
-    });
-
-    console.log(`The bits leaderboard contains ${board.totalCount} entries`);
-    board.entries.forEach(entry => console.log(`${entry.userDisplayName} - ${entry.rank} (${entry.amount})`));
-
-    console.log();
-
     res.send(`Welcome, ${userInfo.displayName}`);
+
+    pubSubClient = new SingleUserPubSubClient({ authProvider });
+    pubSubClient.onRedemption(msg => {
+      console.log(`channelId: ${msg.channelId}`);
+      console.log(`defaultImage: ${msg.defaultImage}`);
+      console.log(`id: ${msg.id}`);
+      console.log(`message: ${msg.message}`);
+      console.log(`redemptionDate: ${msg.redemptionDate}`);
+      console.log(`rewardCost: ${msg.rewardCost}`);
+      console.log(`rewardId: ${msg.rewardId}`);
+      console.log(`rewardImage: ${msg.rewardImage}`);
+      console.log(`rewardIsQueued: ${msg.rewardIsQueued}`);
+      console.log(`rewardPrompt: ${msg.rewardPrompt}`);
+      console.log(`rewardTitle: ${msg.rewardTitle}`);
+      console.log(`status: ${msg.status}`);
+      console.log(`userDisplayName: ${msg.userDisplayName}`);
+      console.log(`userId: ${msg.userId}`);
+      console.log(`userName: ${msg.userName}`);
+    });
+    pubSubClient.onSubscription(msg => {
+      console.log(`cumulativeMonths: ${cumulativeMonths}`);
+      console.log(`giftDuration: ${giftDuration}`);
+      console.log(`gifterDisplayName: ${gifterDisplayName}`);
+      console.log(`gifterId: ${gifterId}`);
+      console.log(`gifterName: ${gifterName}`);
+      console.log(`isAnonymous: ${isAnonymous}`);
+      console.log(`isGift: ${isGift}`);
+      console.log(`isResub: ${isResub}`);
+      console.log(`message: ${message}`);
+      console.log(`months: ${months}`);
+      console.log(`streakMonths: ${streakMonths}`);
+      console.log(`subPlan: ${subPlan}`);
+      console.log(`time: ${time}`);
+      console.log(`userDisplayName: ${userDisplayName}`);
+      console.log(`userId: ${userId}`);
+      console.log(`userName: ${userName}`);
+    });
+    pubSubClient.onBits(msg => {
+      console.log(`bits: ${bits}`);
+      console.log(`isAnonymous: ${isAnonymous}`);
+      console.log(`message: ${message}`);
+      console.log(`totalBits: ${totalBits}`);
+      console.log(`userId: ${userId}`);
+      console.log(`userName: ${userName}`);
+    });
   }
 });
 
