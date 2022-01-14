@@ -39,17 +39,89 @@ const redirect_uri = `http://localhost:${port}/auth/twitch`
  * actual responses from Twitch instead of just spoofs. */
 let state = undefined;
 
-/* When the user is authorized, this is used to wrap the token provided so that
- * we can keep it up to date, since tokens have a finite life. */
+/* When an authentication has occured and we have an access token that will
+ * allow us to talk to Twitch on behalf of this user, the following values
+ * are set up. */
+
+/* A Twurple Authorization Provider; can be used to fetch and refresh tokens. */
 let authProvider = undefined;
 
-/* When the user has authorized their Twitch account, this is set to the API
- * instance that allows us to make requests on their behalf. */
+/* The currently authenticated user. */
+let userInfo = undefined;
+
+/* A Twurple ApiClient that allows us to talk to the Twitch API. */
 let twitchApi = undefined;
 
-/* When the user has authorized their Twitch account, this is set up to be a
- * PubSub client to allow events for the logged in user to flow. */
+/* A Twurple PubSub client that gives us information about subscribed events. */
 let pubSubClient = undefined;
+
+
+// =============================================================================
+
+
+/* Handle an incoming channel point redemption PubSub message. This will trigger
+ * for any custom defined channel point redemption in the channel; it does not
+ * however trigger for built in channel point redeems, since Twitch handles them
+ * itself. */
+function handleRedemption(msg) {
+  console.log(`channelId: ${msg.channelId}`);
+  console.log(`defaultImage: ${msg.defaultImage}`);
+  console.log(`id: ${msg.id}`);
+  console.log(`message: ${msg.message}`);
+  console.log(`redemptionDate: ${msg.redemptionDate}`);
+  console.log(`rewardCost: ${msg.rewardCost}`);
+  console.log(`rewardId: ${msg.rewardId}`);
+  console.log(`rewardImage: ${msg.rewardImage}`);
+  console.log(`rewardIsQueued: ${msg.rewardIsQueued}`);
+  console.log(`rewardPrompt: ${msg.rewardPrompt}`);
+  console.log(`rewardTitle: ${msg.rewardTitle}`);
+  console.log(`status: ${msg.status}`);
+  console.log(`userDisplayName: ${msg.userDisplayName}`);
+  console.log(`userId: ${msg.userId}`);
+  console.log(`userName: ${msg.userName}`);
+};
+
+
+// =============================================================================
+
+
+/* Handle an incoming subscription PubSub message. This triggers for all
+ * subscriptions, though we're primarily interested in gift subscriptions for
+ * our purposes here. */
+function handleSubscription(msg) {
+  console.log(`cumulativeMonths: ${cumulativeMonths}`);
+  console.log(`giftDuration: ${giftDuration}`);
+  console.log(`gifterDisplayName: ${gifterDisplayName}`);
+  console.log(`gifterId: ${gifterId}`);
+  console.log(`gifterName: ${gifterName}`);
+  console.log(`isAnonymous: ${isAnonymous}`);
+  console.log(`isGift: ${isGift}`);
+  console.log(`isResub: ${isResub}`);
+  console.log(`message: ${message}`);
+  console.log(`months: ${months}`);
+  console.log(`streakMonths: ${streakMonths}`);
+  console.log(`subPlan: ${subPlan}`);
+  console.log(`time: ${time}`);
+  console.log(`userDisplayName: ${userDisplayName}`);
+  console.log(`userId: ${userId}`);
+  console.log(`userName: ${userName}`);
+};
+
+
+// =============================================================================
+
+
+/* Handle an incoming bit cheer PubSub message. This is triggered for all cheers
+ * that occur. */
+function handleBits(msg) {
+  console.log(`bits: ${bits}`);
+  console.log(`isAnonymous: ${isAnonymous}`);
+  console.log(`message: ${message}`);
+  console.log(`totalBits: ${totalBits}`);
+  console.log(`userId: ${userId}`);
+  console.log(`userName: ${userName}`);
+};
+
 
 // =============================================================================
 
@@ -138,79 +210,25 @@ app.get('/auth/twitch', async (req, res) => {
       token
     );
 
+    // Set up a Twitch API wrapper using the authorization provider, and then
+    // use it to gather information about the current user.
     twitchApi = new ApiClient({ authProvider });
+    userInfo = await twitchApi.users.getMe();
+
+    // Set up our PubSub client and listen for the events that will allow us to
+    // track the leaderboard.
+    pubSubClient = new SingleUserPubSubClient({ authProvider });
+    pubSubClient.onRedemption(msg => handleRedemption(msg));
+    pubSubClient.onSubscription(msg => handleSubscription(msg));
+    pubSubClient.onBits(msg => handleBits(msg));
   }
 
   return res.redirect('/');
 });
 
-
-/* The root of the site:
- *
- * If this page is loaded and there's not a query parameter that indicates that
- * an authorization just happened, then include a link that will allow the
- * user to authorize themselves with Twitch.
- *
- * The authorization link goes to our route from above, which will set up
- * everything we need and then redirect the page to Twitch to allow it to carry
- * out the authorization on our behalf.
- *
- * If the query parameter is there, the link is not displayed; this does not
- * actually mean that the user is authorized, however. */
-app.get('/', async (req, res) => {
-  if (twitchApi === undefined) {
-    res.send('<a href="/auth">Authorize with twitch</a>');
-  } else {
-
-    const userInfo = await twitchApi.users.getMe();
-    res.send(`Welcome, ${userInfo.displayName}`);
-
-    pubSubClient = new SingleUserPubSubClient({ authProvider });
-    pubSubClient.onRedemption(msg => {
-      console.log(`channelId: ${msg.channelId}`);
-      console.log(`defaultImage: ${msg.defaultImage}`);
-      console.log(`id: ${msg.id}`);
-      console.log(`message: ${msg.message}`);
-      console.log(`redemptionDate: ${msg.redemptionDate}`);
-      console.log(`rewardCost: ${msg.rewardCost}`);
-      console.log(`rewardId: ${msg.rewardId}`);
-      console.log(`rewardImage: ${msg.rewardImage}`);
-      console.log(`rewardIsQueued: ${msg.rewardIsQueued}`);
-      console.log(`rewardPrompt: ${msg.rewardPrompt}`);
-      console.log(`rewardTitle: ${msg.rewardTitle}`);
-      console.log(`status: ${msg.status}`);
-      console.log(`userDisplayName: ${msg.userDisplayName}`);
-      console.log(`userId: ${msg.userId}`);
-      console.log(`userName: ${msg.userName}`);
-    });
-    pubSubClient.onSubscription(msg => {
-      console.log(`cumulativeMonths: ${cumulativeMonths}`);
-      console.log(`giftDuration: ${giftDuration}`);
-      console.log(`gifterDisplayName: ${gifterDisplayName}`);
-      console.log(`gifterId: ${gifterId}`);
-      console.log(`gifterName: ${gifterName}`);
-      console.log(`isAnonymous: ${isAnonymous}`);
-      console.log(`isGift: ${isGift}`);
-      console.log(`isResub: ${isResub}`);
-      console.log(`message: ${message}`);
-      console.log(`months: ${months}`);
-      console.log(`streakMonths: ${streakMonths}`);
-      console.log(`subPlan: ${subPlan}`);
-      console.log(`time: ${time}`);
-      console.log(`userDisplayName: ${userDisplayName}`);
-      console.log(`userId: ${userId}`);
-      console.log(`userName: ${userName}`);
-    });
-    pubSubClient.onBits(msg => {
-      console.log(`bits: ${bits}`);
-      console.log(`isAnonymous: ${isAnonymous}`);
-      console.log(`message: ${message}`);
-      console.log(`totalBits: ${totalBits}`);
-      console.log(`userId: ${userId}`);
-      console.log(`userName: ${userName}`);
-    });
-  }
-});
+/* Set up some middleware that will serve static files out of the public folder
+ * so that we don't have to inline the pages in code. */
+app.use(express.static('public'));
 
 /* Get the server to listen for incoming requests. */
 app.listen(port, () => {
