@@ -8,6 +8,7 @@ const { ApiClient } = require('@twurple/api');
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 
+const trilogy = require('trilogy');
 const crypto = require('crypto');
 
 
@@ -19,9 +20,24 @@ const bot_token_scopes = ['bits:read',
                           'channel:read:redemptions',
                           'channel_subscriptions'];
 
+/* The schema for storing incoming tokens in the database. This is based on the
+ * AccessToken class that's available in Twurple, and the field names here
+ * mirror the ones used there. */
+const TokenSchema = {
+  id: 'increments',
+
+  accessToken: { type: String, nullable: false },
+  refreshToken: { type: String, nullable: true },
+  scopes: { type: Array, defaultsTo: [] },
+  obtainmentTimestamp: { type: Number, defaultsTo: 0 },
+  expiresIn: { type: Number, defaultsTo: 0, nullable: true },
+};
 
 // =============================================================================
 
+
+/* Set up a trilogy database handle to persist our data. */
+const db = trilogy.connect('database.db');
 
 /* The express application that houses the routes that we use to carry out
  * authentication with Twitch as well as serve user requests. */
@@ -128,6 +144,48 @@ function handleBits(msg) {
   console.log(`userId: ${userId}`);
   console.log(`userName: ${userName}`);
 };
+
+// =============================================================================
+
+
+/* Given an object that contains token data, set up the apporopriate Twitch
+ * integrations. */
+async function setupTwitchAccess(model, token) {
+  // Create a Twurple authorization provider; this will take the token info as
+  // it was given and make sure that the tokens are always kept up to date; so
+  // if the application is long lived the token will be refreshed as needed.
+  authProvider = new RefreshingAuthProvider(
+    {
+      clientId: process.env.TWITCHLOYALTY_CLIENT_ID,
+      clientSecret: process.env.TWITCHLOYALTY_CLIENT_SECRET,
+      onRefresh: async newData => {
+        console.log(`Refreshing user token`);
+        await model.update({ id: 1 }, {
+          accessToken: encrypt(newData.accessToken),
+          refreshToken: encrypt(newData.refreshToken),
+          scopes: newData.scopes || [],
+          obtainmentTimestamp: newData.obtainmentTimestamp,
+          expiresIn: newData.expiresIn
+        });
+      }
+    },
+    token
+  );
+
+  // Set up a Twitch API wrapper using the authorization provider, and then
+  // use it to gather information about the current user.
+  twitchApi = new ApiClient({ authProvider });
+  userInfo = await twitchApi.users.getMe();
+
+  // Set up our PubSub client and listen for the events that will allow us to
+  // track the leaderboard.
+  pubSubClient = new SingleUserPubSubClient({ authProvider });
+  pubSubClient.onRedemption(msg => handleRedemption(msg));
+  pubSubClient.onSubscription(msg => handleSubscription(msg));
+  pubSubClient.onBits(msg => handleBits(msg));
+
+  console.log('Twitch stuff has been set up');
+}
 
 // =============================================================================
 
@@ -251,31 +309,20 @@ app.get('/auth/twitch', async (req, res) => {
       process.env.TWITCHLOYALTY_CLIENT_SECRET,
       code, redirect_uri);
 
-    // Create a Twurple authorization provider; this will take the token info as
-    // it was given and make sure that the tokens are always kept up to date; so
-    // if the application is long lived the token will be refreshed as needed.
-    authProvider = new RefreshingAuthProvider(
-      {
-        clientId: process.env.TWITCHLOYALTY_CLIENT_ID,
-        clientSecret: process.env.TWITCHLOYALTY_CLIENT_SECRET,
-        onRefresh: async newData => {
-          console.log(`Refreshing user token`);
-        }
-      },
-      token
-    );
+    // Persist the token into the database; here we also encrypt the access and
+    // refresh tokens to make sure that they don't accidentally leak.
+    const model = await db.model('tokens', TokenSchema);
+    await model.updateOrCreate({
+      id: 1,
+      accessToken: encrypt(token.accessToken),
+      refreshToken: encrypt(token.refreshToken),
+      scopes: token.scopes || [],
+      obtainmentTimestamp: token.obtainmentTimestamp,
+      expiresIn: token.expiresIn,
+    });
 
-    // Set up a Twitch API wrapper using the authorization provider, and then
-    // use it to gather information about the current user.
-    twitchApi = new ApiClient({ authProvider });
-    userInfo = await twitchApi.users.getMe();
-
-    // Set up our PubSub client and listen for the events that will allow us to
-    // track the leaderboard.
-    pubSubClient = new SingleUserPubSubClient({ authProvider });
-    pubSubClient.onRedemption(msg => handleRedemption(msg));
-    pubSubClient.onSubscription(msg => handleSubscription(msg));
-    pubSubClient.onBits(msg => handleBits(msg));
+    // Set up our access
+    await setupTwitchAccess(model, token);
   }
 
   return res.redirect('/');
@@ -289,3 +336,22 @@ app.use(express.static('public'));
 app.listen(port, () => {
     console.log(`Listening for requests on http://localhost:${port}`);
 });
+
+
+/* Try to load an existing token from the database, and if we find one, use it
+ * to set up the database. */
+async function setup() {
+  // Fetch the model that we use to store our tokens.
+  const model = await db.model('tokens', TokenSchema);
+
+  // Try to fetch out the token. If we find one, then we can decrypt the token
+  // and refresh token and pass them in to set up the environment.
+  const token = await model.findOne({ id: 1 });
+  if (token !== undefined) {
+    token.accessToken = decrypt(token.accessToken);
+    token.refreshToken = decrypt(token.refreshToken);
+    setupTwitchAccess(model, token);
+  }
+}
+
+setup();
