@@ -1,30 +1,54 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Speedpaint Giveaway</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Speedpaint Giveaway</title>
+  <style type="text/css">
+    body {
+      background: #181819;
+    }
+
+    button {
+      padding: 0.5em;
+      width: 100%;
+    }
+  </style>
 </head>
 <body>
-<a href="/auth">Authorize with Twitch</a>
-<a href="/deauth">Drop Twitch Authorization</a>
+
+<a id="auth-link" href="#" target="_top"><button id="authorize-btn">Authorize with Bot Account</button></a>
 
 <script type="module">
-    const WebSocketWrapper = require("ws-wrapper");
+  // Alter the link and text for the authorize button so that if the user is
+  // authorized it will display their name and offer to deauthorize, and
+  // otherwise it will invite them to auth themselves.
+  function setupAuthButton(authorized, username) {
+    const authLink = document.getElementById('auth-link');
+    const authBtn = document.getElementById('authorize-btn');
 
-    // Establish a connection to the main server so that we can get triggered
-    // events as they occur.
-    const socket = new WebSocketWrapper(new WebSocket(`ws://${location.hostname}:4040`));
+    authBtn.innerText = authorized ? `Deauthorize ${username}` : 'Authorize with Twitch';
+    authLink.href = authorized ? '/deauth' : '/auth';
+  }
 
-    // Listen for the "msg" event and log it so we know that it was actually
-    // received.
-    socket.on("msg", function(from, msg) {
-        console.log(`Received message from ${from}: ${msg}`);
-    });
+  // By default, assume we're not authorized until we learn differently.
+  setupAuthButton(false);
 
-    // For test purposes, send out a message so we can tell that everything is
-    // working.
-    socket.emit("msg", "my_name", "This is a test message");
+  const WebSocketWrapper = require("ws-wrapper");
+
+  // Establish a connection to the main server so that we can get triggered
+  // events as they occur.
+  const socket = new WebSocketWrapper(new WebSocket(`ws://${location.hostname}:4040`));
+
+  // Listen for the "msg" event and log it so we know that it was actually
+  // received.
+  socket.on("msg", (from, msg) => {
+    console.log(`Received message from ${from}: ${msg}`);
+  });
+
+  socket.on("twitch-auth", data => {
+    setupAuthButton(data.authorized, data.userName);
+  });
 </script>
 </body>
 </html>

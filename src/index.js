@@ -206,6 +206,10 @@ async function setupTwitchAccess(model, token) {
     pubSubClient.onBits(msg => handleBits(msg)),
   ]);
 
+  // Transmit to all listeners the fact that we're currently authorized, and who
+  // the authorized user is.
+  sendSocketMessage('twitch-auth', { authorized: true, userName: userInfo.displayName});
+
   console.log('Twitch integration setup complete');
 }
 
@@ -235,6 +239,9 @@ async function shutdownTwitchAccess() {
   twitchApi = undefined;
   userInfo = undefined;
 
+  // Let all connected listeners know that we are no longer authorized.
+  sendSocketMessage('twitch-auth', { authorized: false });
+
   console.log('Twitch integrations have been shut down');
 }
 
@@ -255,6 +262,13 @@ function setupWebSockets() {
     // socket wrappers, and add it to the list of currently known clients.
     const socket = new WebSocketWrapper(webSocket);
     webClients.add(socket);
+
+    // Send a message to this socket to tell it the Twitch authorization state.
+    // Further updates will automatically occur as they happen.
+    socket.emit('twitch-auth', {
+      authorized: authProvider !== undefined,
+      userName: userInfo !== undefined ? userInfo.displayName : undefined
+    });
 
     // Listen for this socket being disconnected and handle that situation by
     // removing it from the list of currently known clients.
