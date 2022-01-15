@@ -8,6 +8,9 @@ const { ApiClient } = require('@twurple/api');
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 
+const { Server } = require("ws");
+const WebSocketWrapper = require("ws-wrapper");
+
 const trilogy = require('trilogy');
 const crypto = require('crypto');
 
@@ -33,6 +36,7 @@ const TokenSchema = {
   expiresIn: { type: Number, defaultsTo: 0, nullable: true },
 };
 
+
 // =============================================================================
 
 
@@ -45,8 +49,15 @@ const app = express();
 
 /* The port on which the application listens and the URI that Twitch should
  * redirect back to whenever we communicate with it. */
-const port = 3030;
-const redirect_uri = `http://localhost:${port}/auth/twitch`
+const webPort = 3030;
+const redirect_uri = `http://localhost:${webPort}/auth/twitch`
+
+/* When we start up, we set up a websocket server to allow our overlay and
+ * control page to talk to us and (by extension) each other. This sets the port
+ * that's used, and the set holds the list of clients that are currently
+ * connected so we can send them messages. */
+const socketPort = 4040;
+let webClients = new Set();
 
 /* When we persist token information into the database, we first encrypt it to
  * ensure that casual inspection doesn't leak anything important. This sets the
@@ -62,7 +73,7 @@ const algorithm = 'aes-256-ctr';
  * actual responses from Twitch instead of just spoofs. */
 let state = undefined;
 
-/* When an authentication has occured and we have an access token that will
+/* When an authentication has occurred and we have an access token that will
  * allow us to talk to Twitch on behalf of this user, the following values
  * are set up. */
 
@@ -148,7 +159,7 @@ function handleBits(msg) {
 // =============================================================================
 
 
-/* Given an object that contains token data, set up the apporopriate Twitch
+/* Given an object that contains token data, set up the appropriate Twitch
  * integrations. */
 async function setupTwitchAccess(model, token) {
   // Create a Twurple authorization provider; this will take the token info as
@@ -178,13 +189,58 @@ async function setupTwitchAccess(model, token) {
   userInfo = await twitchApi.users.getMe();
 
   // Set up our PubSub client and listen for the events that will allow us to
-  // track the leaderboard.
+  // track the leader board.
   pubSubClient = new SingleUserPubSubClient({ authProvider });
   pubSubClient.onRedemption(msg => handleRedemption(msg));
   pubSubClient.onSubscription(msg => handleSubscription(msg));
   pubSubClient.onBits(msg => handleBits(msg));
 
   console.log('Twitch stuff has been set up');
+}
+
+
+// =============================================================================
+
+
+/* Set up the websocket listener that the overlay and the control panel will use
+ * to communicate with the server and get updates. We do this rather than a long
+ * poll so that everything is more interactive and speedy. */
+function setupWebSockets() {
+  const server = new Server({ port: socketPort });
+
+  server.on("connection", (webSocket) => {
+    console.log('=> incoming connection');
+
+    // Register a new connection by wrapping the incoming socket in one of our
+    // socket wrappers, and add it to the list of currently known clients.
+    const socket = new WebSocketWrapper(webSocket);
+    webClients.add(socket);
+
+    // Listen for this socket being disconnected and handle that situation by
+    // removing it from the list of currently known clients.
+    socket.on("disconnect", () => {
+      console.log('==> client disconnected');
+      webClients.delete(socket);
+    });
+
+    // Listen for incoming messages on the "msg" event; this indicates that a
+    // client is sending a message. Here we redirect that out to all currently
+    // known clients.
+    socket.on("msg", (from, msg) => {
+      console.log(`Received message from ${from}: ${msg}`);
+
+      // Relay message to all clients
+      sendSocketMessage("msg", from, msg);
+    });
+  });
+}
+
+
+// =============================================================================
+
+
+function sendSocketMessage(event, ...args) {
+  webClients.forEach(socket => socket.emit(event, ...args));
 }
 
 // =============================================================================
@@ -333,14 +389,17 @@ app.get('/auth/twitch', async (req, res) => {
 app.use(express.static('public'));
 
 /* Get the server to listen for incoming requests. */
-app.listen(port, () => {
-    console.log(`Listening for requests on http://localhost:${port}`);
+app.listen(webPort, () => {
+    console.log(`Listening for requests on http://localhost:${webPort}`);
 });
 
 
 /* Try to load an existing token from the database, and if we find one, use it
  * to set up the database. */
 async function setup() {
+  // Start up the WebSocket listener
+  setupWebSockets();
+
   // Fetch the model that we use to store our tokens.
   const model = await db.model('tokens', TokenSchema);
 

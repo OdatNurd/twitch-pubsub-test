@@ -7,5 +7,23 @@
 </head>
 <body>
 <a href="/auth">Authorize with twitch</a>
+
+<script type="module">
+    const WebSocketWrapper = require("ws-wrapper");
+
+    // Establish a connection to the main server so that we can get triggered
+    // events as they occur.
+    const socket = new WebSocketWrapper(new WebSocket(`ws://${location.hostname}:4040`));
+
+    // Listen for the "msg" event and log it so we know that it was actually
+    // received.
+    socket.on("msg", function(from, msg) {
+        console.log(`Received message from ${from}: ${msg}`);
+    });
+
+    // For test purposes, send out a message so we can tell that everything is
+    // working.
+    socket.emit("msg", "my_name", "This is a test message");
+</script>
 </body>
 </html>

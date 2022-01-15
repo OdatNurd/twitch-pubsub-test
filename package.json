@@ -25,7 +25,8 @@
     "express": "^4.17.2",
     "sqlite3": "^5.0.2",
     "trilogy": "^2.0.5",
-    "uuid": "^8.3.2"
+    "uuid": "^8.3.2",
+    "ws-wrapper": "^2.0.2"
   },
   "devDependencies": {
     "parcel": "^2.2.0"
