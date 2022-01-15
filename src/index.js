@@ -86,9 +86,11 @@ let userInfo = undefined;
 /* A Twurple ApiClient that allows us to talk to the Twitch API. */
 let twitchApi = undefined;
 
-/* A Twurple PubSub client that gives us information about subscribed events. */
+/* A Twurple PubSub client that gives us information about subscribed events.
+ * As we subscribe to events, we add the listeners to the listener array so
+ * that if we need to, we can redact them. */
 let pubSubClient = undefined;
-
+let pubSubListeners = [];
 
 // =============================================================================
 
@@ -162,6 +164,12 @@ function handleBits(msg) {
 /* Given an object that contains token data, set up the appropriate Twitch
  * integrations. */
 async function setupTwitchAccess(model, token) {
+  // If we've already set up Twitch access, be a giant coward and refuse to do
+  // it again. The user needs to deauth first.
+  if (authProvider !== undefined) {
+    return;
+  }
+
   // Create a Twurple authorization provider; this will take the token info as
   // it was given and make sure that the tokens are always kept up to date; so
   // if the application is long lived the token will be refreshed as needed.
@@ -189,13 +197,45 @@ async function setupTwitchAccess(model, token) {
   userInfo = await twitchApi.users.getMe();
 
   // Set up our PubSub client and listen for the events that will allow us to
-  // track the leader board.
+  // track the leader board. Since we may need to remove these, we need to
+  // store the listeners as we add them.
   pubSubClient = new SingleUserPubSubClient({ authProvider });
-  pubSubClient.onRedemption(msg => handleRedemption(msg));
-  pubSubClient.onSubscription(msg => handleSubscription(msg));
-  pubSubClient.onBits(msg => handleBits(msg));
+  pubSubListeners = await Promise.all([
+    pubSubClient.onRedemption(msg => handleRedemption(msg)),
+    pubSubClient.onSubscription(msg => handleSubscription(msg)),
+    pubSubClient.onBits(msg => handleBits(msg)),
+  ]);
 
-  console.log('Twitch stuff has been set up');
+  console.log('Twitch integration setup complete');
+}
+
+// =============================================================================
+
+
+/* This removes all current Twitch integrations that have been set up (if any),
+ * in preparation for the user logging out of Twitch or changing their
+ * current authorization. */
+async function shutdownTwitchAccess() {
+  // If we have not already set up Twitch access, there's nothing to shut down
+  if (authProvider === undefined) {
+    return;
+  }
+
+  // If we previously set up listeners in this run, we need to remove them
+  // before we shut down.
+  if (pubSubClient !== undefined) {
+    pubSubListeners.forEach(listener => pubSubClient.removeListener(listener));
+    pubSubClient = undefined;
+    pubSubListeners = []
+  }
+
+  // Clobber away our authorization provider and twitch API handle, as well as
+  // the cached information on the current user.
+  authProvider = undefined;
+  twitchApi = undefined;
+  userInfo = undefined;
+
+  console.log('Twitch integrations have been shut down');
 }
 
 
@@ -303,6 +343,13 @@ function decrypt(text) {
  * which can happen either after the user says they authorize, after they cancel
  * or not at all, if the user just closes the page. */
 app.get('/auth', (req, res) => {
+  // If we're already authorized, then we don't want to try to authorize again.
+  // So in that case, we can just leave.
+  if (authProvider !== undefined) {
+    console.log('The user is already authenticated; stopping the auth flow');
+    return res.redirect('/');
+  }
+
   // When we make our request to Twitch, we provide it a random state string; it
   // will return it back untouched, allowing us to verify when the appropriate
   // route gets contacted that the response provided relates to the one that we
@@ -325,6 +372,25 @@ app.get('/auth', (req, res) => {
   res.redirect(`https://id.twitch.tv/oauth2/authorize?${new URLSearchParams(params)}`);
 });
 
+
+/* This route kicks off our de-authorization process, which will check to see if
+ * we currently have an access token and, if we do, remove it before redirecting
+ * back to the root page. */
+app.get('/deauth', async (req, res) => {
+  // If we are actually authorized, then remove authorization before we redirect
+  // back. In the case where we're not authorized, skip calling these (even
+  // though it is fine to do so).
+  if (authProvider !== undefined) {
+    // Shut down our access to Twitch; this will remove all cached information and
+    // stop us from receiving messages or talking to the API.
+    shutdownTwitchAccess();
+
+    const model = await db.model('tokens', TokenSchema);
+    await model.remove({ id: 1 });
+  }
+
+  res.redirect('/');
+});
 
 /* This route is where Twitch will call us back after the user either authorizes
  * the application or declines to authorize.
