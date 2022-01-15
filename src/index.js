@@ -98,21 +98,21 @@ let pubSubClient = undefined;
  * however trigger for built in channel point redeems, since Twitch handles them
  * itself. */
 function handleRedemption(msg) {
-  console.log(`channelId: ${msg.channelId}`);
-  console.log(`defaultImage: ${msg.defaultImage}`);
-  console.log(`id: ${msg.id}`);
-  console.log(`message: ${msg.message}`);
-  console.log(`redemptionDate: ${msg.redemptionDate}`);
-  console.log(`rewardCost: ${msg.rewardCost}`);
-  console.log(`rewardId: ${msg.rewardId}`);
-  console.log(`rewardImage: ${msg.rewardImage}`);
-  console.log(`rewardIsQueued: ${msg.rewardIsQueued}`);
-  console.log(`rewardPrompt: ${msg.rewardPrompt}`);
-  console.log(`rewardTitle: ${msg.rewardTitle}`);
-  console.log(`status: ${msg.status}`);
-  console.log(`userDisplayName: ${msg.userDisplayName}`);
-  console.log(`userId: ${msg.userId}`);
-  console.log(`userName: ${msg.userName}`);
+  console.log(`channelId: ${msg.channelId}`);              // channelId: 66586458
+  console.log(`defaultImage: ${msg.defaultImage}`);        // defaultImage: [object Object]
+  console.log(`id: ${msg.id}`);                            // id: d113cb94-13d3-487f-ab40-dd1d707df4e2
+  console.log(`message: ${msg.message}`);                  // message: like this
+  console.log(`redemptionDate: ${msg.redemptionDate}`);    // redemptionDate: Fri Jan 14 2022 22:50:25 GMT-0800 (Pacific Standard Time)
+  console.log(`rewardCost: ${msg.rewardCost}`);            // rewardCost: 100
+  console.log(`rewardId: ${msg.rewardId}`);                // rewardId: 648252cf-1b6d-409a-a901-1764f5abdd28
+  console.log(`rewardImage: ${msg.rewardImage}`);          // rewardImage: [object Object]
+  console.log(`rewardIsQueued: ${msg.rewardIsQueued}`);    // rewardIsQueued: false
+  console.log(`rewardPrompt: ${msg.rewardPrompt}`);        // rewardPrompt: Consign your custom message to the bit bucket
+  console.log(`rewardTitle: ${msg.rewardTitle}`);          // rewardTitle: /dev/null
+  console.log(`status: ${msg.status}`);                    // status: FULFILLED
+  console.log(`userDisplayName: ${msg.userDisplayName}`);  // userDisplayName: OdatNurd
+  console.log(`userId: ${msg.userId}`);                    // userId: 66586458
+  console.log(`userName: ${msg.userName}`);                // userName: odatnurd
 };
 
 
@@ -123,22 +123,22 @@ function handleRedemption(msg) {
  * subscriptions, though we're primarily interested in gift subscriptions for
  * our purposes here. */
 function handleSubscription(msg) {
-  console.log(`cumulativeMonths: ${cumulativeMonths}`);
-  console.log(`giftDuration: ${giftDuration}`);
-  console.log(`gifterDisplayName: ${gifterDisplayName}`);
-  console.log(`gifterId: ${gifterId}`);
-  console.log(`gifterName: ${gifterName}`);
-  console.log(`isAnonymous: ${isAnonymous}`);
-  console.log(`isGift: ${isGift}`);
-  console.log(`isResub: ${isResub}`);
-  console.log(`message: ${message}`);
-  console.log(`months: ${months}`);
-  console.log(`streakMonths: ${streakMonths}`);
-  console.log(`subPlan: ${subPlan}`);
-  console.log(`time: ${time}`);
-  console.log(`userDisplayName: ${userDisplayName}`);
-  console.log(`userId: ${userId}`);
-  console.log(`userName: ${userName}`);
+  console.log(`cumulativeMonths: ${msg.cumulativeMonths}`);
+  console.log(`giftDuration: ${msg.giftDuration}`);
+  console.log(`gifterDisplayName: ${msg.gifterDisplayName}`);
+  console.log(`gifterId: ${msg.gifterId}`);
+  console.log(`gifterName: ${msg.gifterName}`);
+  console.log(`isAnonymous: ${msg.isAnonymous}`);
+  console.log(`isGift: ${msg.isGift}`);
+  console.log(`isResub: ${msg.isResub}`);
+  console.log(`message: ${msg.message}`);
+  console.log(`months: ${msg.months}`);
+  console.log(`streakMonths: ${msg.streakMonths}`);
+  console.log(`subPlan: ${msg.subPlan}`);
+  console.log(`time: ${msg.time}`);
+  console.log(`userDisplayName: ${msg.userDisplayName}`);
+  console.log(`userId: ${msg.userId}`);
+  console.log(`userName: ${msg.userName}`);
 };
 
 
@@ -148,12 +148,12 @@ function handleSubscription(msg) {
 /* Handle an incoming bit cheer PubSub message. This is triggered for all cheers
  * that occur. */
 function handleBits(msg) {
-  console.log(`bits: ${bits}`);
-  console.log(`isAnonymous: ${isAnonymous}`);
-  console.log(`message: ${message}`);
-  console.log(`totalBits: ${totalBits}`);
-  console.log(`userId: ${userId}`);
-  console.log(`userName: ${userName}`);
+  console.log(`bits: ${msg.bits}`);                // bits: 100
+  console.log(`isAnonymous: ${msg.isAnonymous}`);  // isAnonymous: false
+  console.log(`message: ${msg.message}`);          // message: SeemsGood100
+  console.log(`totalBits: ${msg.totalBits}`);      // totalBits: 1454
+  console.log(`userId: ${msg.userId}`);            // userId: 136337257
+  console.log(`userName: ${msg.userName}`);        // userName: valleydweller
 };
 
 // =============================================================================
