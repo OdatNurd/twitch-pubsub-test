@@ -4,8 +4,48 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Speedpaint Giveaway Overlay</title>
+  <style type="text/css">
+    .hide {
+      display: none !important;
+    }
+
+    #text {
+      display: inline-block;
+      font-size: 2em;
+      color: white;
+      background: #181819;
+      padding: 0.5em;
+    }
+  </style>
 </head>
 <body>
-  <b>I am the overlay. You probably can't see this.</b>
+  <div id="text" class="hide"></div>
+
+  <script type="module">
+    // Alter the link and text for the authorize button so that if the user is
+    // authorized it will display their name and offer to deauthorize, and
+    // otherwise it will invite them to auth themselves.
+    function setupTextBox(authorized, username) {
+      console.log(`setupTextBox(${authorized}, ${username})`);
+      const text = document.getElementById('text');
+      if (authorized === true) {
+        text.classList.remove('hide');
+        text.innerText = `I am ${username}'s overlay and hopefully you can see me`;
+      } else {
+        text.classList.add('hide');
+      }
+    }
+
+    // By default, assume we're not authorized until we learn differently.
+    setupTextBox(false);
+    const WebSocketWrapper = require("ws-wrapper");
+
+    // Establish a connection to the main server so that we can get triggered
+    // events as they occur.
+    const socket = new WebSocketWrapper(new WebSocket(`ws://${location.hostname}:4040`));
+    socket.on("twitch-auth", data => {
+      setupTextBox(data.authorized, data.userName);
+    });
+  </script>
 </body>
 </html>
