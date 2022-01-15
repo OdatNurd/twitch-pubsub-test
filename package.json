@@ -2,10 +2,22 @@
   "name": "twitch-pubsub-test",
   "version": "1.0.0",
   "description": "Sample code to test out how PubSub works",
-  "main": "index.js",
   "author": "Terence Martin",
   "license": "MIT",
   "private": true,
+  "scripts": {
+    "build": "parcel build",
+    "watch": "parcel watch"
+  },
+  "targets": {
+    "default": {
+      "source": [
+        "src/web/index.html",
+        "src/web/overlay.html"
+      ],
+      "distDir": "./public"
+    }
+  },
   "dependencies": {
     "@twurple/api": "^5.0.13",
     "@twurple/auth": "^5.0.13",
@@ -14,5 +26,8 @@
     "sqlite3": "^5.0.2",
     "trilogy": "^2.0.5",
     "uuid": "^8.3.2"
+  },
+  "devDependencies": {
+    "parcel": "^2.2.0"
   }
 }
