@@ -22,6 +22,7 @@
     "@twurple/api": "^5.0.13",
     "@twurple/auth": "^5.0.13",
     "@twurple/pubsub": "^5.0.13",
+    "dotenv": "^12.0.3",
     "express": "^4.17.2",
     "sqlite3": "^5.0.2",
     "trilogy": "^2.0.5",

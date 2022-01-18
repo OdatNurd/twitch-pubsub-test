@@ -1,5 +1,6 @@
 // =============================================================================
 
+require('dotenv').config();
 
 const { RefreshingAuthProvider, getTokenInfo, exchangeCode } = require('@twurple/auth');
 const { SingleUserPubSubClient } = require('@twurple/pubsub');
