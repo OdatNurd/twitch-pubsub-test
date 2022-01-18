@@ -126,22 +126,22 @@ function handleRedemption(msg) {
  * subscriptions, though we're primarily interested in gift subscriptions for
  * our purposes here. */
 function handleSubscription(msg) {
-  console.log(`cumulativeMonths: ${msg.cumulativeMonths}`);
-  console.log(`giftDuration: ${msg.giftDuration}`);
-  console.log(`gifterDisplayName: ${msg.gifterDisplayName}`);
-  console.log(`gifterId: ${msg.gifterId}`);
-  console.log(`gifterName: ${msg.gifterName}`);
-  console.log(`isAnonymous: ${msg.isAnonymous}`);
-  console.log(`isGift: ${msg.isGift}`);
-  console.log(`isResub: ${msg.isResub}`);
-  console.log(`message: ${msg.message}`);
-  console.log(`months: ${msg.months}`);
-  console.log(`streakMonths: ${msg.streakMonths}`);
-  console.log(`subPlan: ${msg.subPlan}`);
-  console.log(`time: ${msg.time}`);
-  console.log(`userDisplayName: ${msg.userDisplayName}`);
-  console.log(`userId: ${msg.userId}`);
-  console.log(`userName: ${msg.userName}`);
+  console.log(`cumulativeMonths: ${msg.cumulativeMonths}`);   // cumulativeMonths: 11                                            cumulativeMonths: 1
+  console.log(`giftDuration: ${msg.giftDuration}`);           // giftDuration: null                                              giftDuration: 1
+  console.log(`gifterDisplayName: ${msg.gifterDisplayName}`); // gifterDisplayName: null                                         gifterDisplayName: marisuemartin
+  console.log(`gifterId: ${msg.gifterId}`);                   // gifterId: null                                                  gifterId: 499189939
+  console.log(`gifterName: ${msg.gifterName}`);               // gifterName: null                                                gifterName: marisuemartin
+  console.log(`isAnonymous: ${msg.isAnonymous}`);             // isAnonymous: false                                              isAnonymous: false
+  console.log(`isGift: ${msg.isGift}`);                       // isGift: false                                                   isGift: true
+  console.log(`isResub: ${msg.isResub}`);                     // isResub: true                                                   isResub: false
+  console.log(`message: ${msg.message}`);                     // message: [object Object]                                        message: null
+  console.log(`months: ${msg.months}`);                       // months: 11                                                      months: 1
+  console.log(`streakMonths: ${msg.streakMonths}`);           // streakMonths: 11                                                streakMonths: 0
+  console.log(`subPlan: ${msg.subPlan}`);                     // subPlan: 1000                                                   subPlan: 1000
+  console.log(`time: ${msg.time}`);                           // time: Sun Jan 16 2022 10:07:01 GMT-0800 (Pacific Standard Time) time: Sun Jan 16 2022 10:07:29 GMT-0800 (Pacific Standard Time)
+  console.log(`userDisplayName: ${msg.userDisplayName}`);     // userDisplayName: marisuemartin                                  userDisplayName: PhutBot
+  console.log(`userId: ${msg.userId}`);                       // userId: 499189939                                               userId: 56740791
+  console.log(`userName: ${msg.userName}`);                   // userName: marisuemartin                                         userName: phutbot
 };
 
 
