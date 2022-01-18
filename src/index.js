@@ -310,7 +310,7 @@ function encrypt(text) {
     const iv = crypto.randomBytes(16);
 
     // Do the encryption on the data, leaving it in an encrypted buffer.
-    const cipher = crypto.createCipheriv(algorithm, process.env.TWITCHBOT_CRYPTO_SECRET, iv);
+    const cipher = crypto.createCipheriv(algorithm, process.env.TWITCHLOYALTY_CRYPTO_SECRET, iv);
     const encrypted = Buffer.concat([cipher.update(text), cipher.final()]);
 
     // The returned value needs to contain the initialization vector used during
@@ -339,7 +339,7 @@ function decrypt(text) {
     const iv = Buffer.from(hash.iv, 'hex');
 
     // Create the object that will do the decrypt using the data from the hash
-    const decipher = crypto.createDecipheriv(algorithm, process.env.TWITCHBOT_CRYPTO_SECRET, iv);
+    const decipher = crypto.createDecipheriv(algorithm, process.env.TWITCHLOYALTY_CRYPTO_SECRET, iv);
     const content = Buffer.from(hash.content, 'hex');
 
     // Return the decrypted data.
