@@ -22,11 +22,13 @@
   <div id="text" class="hide"></div>
 
   <script type="module">
+    // Bring in our websocket library.
+    const getWebSocket = require('./websocket');
+
     // Alter the link and text for the authorize button so that if the user is
     // authorized it will display their name and offer to deauthorize, and
     // otherwise it will invite them to auth themselves.
     function setupTextBox(authorized, username) {
-      console.log(`setupTextBox(${authorized}, ${username})`);
       const text = document.getElementById('text');
       if (authorized === true) {
         text.classList.remove('hide');
@@ -38,11 +40,12 @@
 
     // By default, assume we're not authorized until we learn differently.
     setupTextBox(false);
-    const WebSocketWrapper = require("ws-wrapper");
 
-    // Establish a connection to the main server so that we can get triggered
-    // events as they occur.
-    const socket = new WebSocketWrapper(new WebSocket(`ws://${location.hostname}:4040`));
+    // Connected to the server.
+    const socket = getWebSocket(location.hostname, 4040);
+
+    // When the Twitch authorization state changes, change the text in the
+    // overlay box.
     socket.on("twitch-auth", data => {
       setupTextBox(data.authorized, data.userName);
     });

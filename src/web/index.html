@@ -22,6 +22,9 @@
 <a id="auth-link" href="#" target="_top"><button id="authorize-btn">Authorize with Bot Account</button></a>
 
 <script type="module">
+  // Bring in our websocket library.
+  const getWebSocket = require('./websocket');
+
   // Alter the link and text for the authorize button so that if the user is
   // authorized it will display their name and offer to deauthorize, and
   // otherwise it will invite them to auth themselves.
@@ -36,18 +39,11 @@
   // By default, assume we're not authorized until we learn differently.
   setupAuthButton(false);
 
-  const WebSocketWrapper = require("ws-wrapper");
+  // Connected to the server.
+  const socket = getWebSocket(location.hostname, 4040);
 
-  // Establish a connection to the main server so that we can get triggered
-  // events as they occur.
-  const socket = new WebSocketWrapper(new WebSocket(`ws://${location.hostname}:4040`));
-
-  // Listen for the "msg" event and log it so we know that it was actually
-  // received.
-  socket.on("msg", (from, msg) => {
-    console.log(`Received message from ${from}: ${msg}`);
-  });
-
+  // When the twitch authorization state changes, alter the link and text of the
+  // button to suit.
   socket.on("twitch-auth", data => {
     setupAuthButton(data.authorized, data.userName);
   });

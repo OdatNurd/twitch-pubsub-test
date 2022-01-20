@@ -277,16 +277,6 @@ function setupWebSockets() {
       console.log('==> client disconnected');
       webClients.delete(socket);
     });
-
-    // Listen for incoming messages on the "msg" event; this indicates that a
-    // client is sending a message. Here we redirect that out to all currently
-    // known clients.
-    socket.on("msg", (from, msg) => {
-      console.log(`Received message from ${from}: ${msg}`);
-
-      // Relay message to all clients
-      sendSocketMessage("msg", from, msg);
-    });
   });
 }
 
