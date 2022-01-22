@@ -47,6 +47,7 @@ const db = trilogy.connect('database.db');
 /* The express application that houses the routes that we use to carry out
  * authentication with Twitch as well as serve user requests. */
 const app = express();
+app.use(express.json());
 
 /* The port on which the application listens and the URI that Twitch should
  * redirect back to whenever we communicate with it. */
@@ -101,6 +102,10 @@ let pubSubListeners = [];
  * however trigger for built in channel point redeems, since Twitch handles them
  * itself. */
 function handleRedemption(msg) {
+  sendSocketMessage('twitch-redeem', {
+    authorized: true, userName: userInfo.displayName
+  });
+
   console.log(`channelId: ${msg.channelId}`);              // channelId: 66586458
   console.log(`defaultImage: ${msg.defaultImage}`);        // defaultImage: [object Object]
   console.log(`id: ${msg.id}`);                            // id: d113cb94-13d3-487f-ab40-dd1d707df4e2
@@ -126,6 +131,13 @@ function handleRedemption(msg) {
  * subscriptions, though we're primarily interested in gift subscriptions for
  * our purposes here. */
 function handleSubscription(msg) {
+  sendSocketMessage('twitch-sub', {
+    gifterDisplayName: msg.gifterDisplayName,
+    gifterId: msg.gifterId,
+    userDisplayName: msg.userDisplayName,
+    userId: msg.userId,
+  });
+
   console.log(`cumulativeMonths: ${msg.cumulativeMonths}`);   // cumulativeMonths: 11                                            cumulativeMonths: 1
   console.log(`giftDuration: ${msg.giftDuration}`);           // giftDuration: null                                              giftDuration: 1
   console.log(`gifterDisplayName: ${msg.gifterDisplayName}`); // gifterDisplayName: null                                         gifterDisplayName: marisuemartin
@@ -144,13 +156,21 @@ function handleSubscription(msg) {
   console.log(`userName: ${msg.userName}`);                   // userName: marisuemartin                                         userName: phutbot
 };
 
-
 // =============================================================================
 
 
 /* Handle an incoming bit cheer PubSub message. This is triggered for all cheers
  * that occur. */
 function handleBits(msg) {
+  sendSocketMessage('twitch-bits', {
+    bits: msg.bits,
+    isAnonymous: msg.isAnonymous,
+    message: msg.message,
+    totalBits: msg.totalBits,
+    userId: msg.userId,
+    userName : msg.userName,
+  });
+
   console.log(`bits: ${msg.bits}`);                // bits: 100
   console.log(`isAnonymous: ${msg.isAnonymous}`);  // isAnonymous: false
   console.log(`message: ${msg.message}`);          // message: SeemsGood100
@@ -396,6 +416,16 @@ app.get('/deauth', async (req, res) => {
 
   res.redirect('/');
 });
+
+app.post('/test/bits', async (req, res) => {
+  handleBits(req.body);
+  res.json({success: true});
+})
+
+app.post('/test/subs', async (req, res) => {
+  handleSubscription(req.body);
+  res.json({success: true});
+})
 
 /* This route is where Twitch will call us back after the user either authorizes
  * the application or declines to authorize.
