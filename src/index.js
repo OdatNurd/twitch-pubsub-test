@@ -4,6 +4,7 @@ require('dotenv').config();
 
 const { RefreshingAuthProvider, getTokenInfo, exchangeCode } = require('@twurple/auth');
 const { SingleUserPubSubClient } = require('@twurple/pubsub');
+const { ChatClient } = require('@twurple/chat');
 const { ApiClient } = require('@twurple/api');
 
 const express = require('express');
@@ -20,7 +21,8 @@ const crypto = require('crypto');
 
 
 /* The scopes to request access for when we authenticate with twitch. */
-const bot_token_scopes = ['bits:read',
+const bot_token_scopes = ['chat:read', 'chat:edit',
+                          'bits:read',
                           'channel:read:redemptions',
                           'channel_subscriptions'];
 
@@ -87,6 +89,18 @@ let userInfo = undefined;
 
 /* A Twurple ApiClient that allows us to talk to the Twitch API. */
 let twitchApi = undefined;
+
+/* When the chat system has been set up, these specify the chat client object
+ * (which is a Twurple ChatClient instance) and the channel that the chat is
+ * sending to (which is the name of the authorized user.
+ *
+ * Whenever we set up a chat client we need to listen for some events; if the
+ * authorization is dropped, we have to leave the chat, and for that we need
+ * to remove the listeners, and for that we need to track which ones we added;
+ * that's what chatListeners is for. */
+let chatClient = undefined;
+let chatChannel = undefined;
+let chatListeners = undefined;
 
 /* A Twurple PubSub client that gives us information about subscribed events.
  * As we subscribe to events, we add the listeners to the listener array so
@@ -233,6 +247,101 @@ async function setupTwitchAccess(model, token) {
 
   console.log('Twitch integration setup complete');
 }
+
+
+// =============================================================================
+
+
+/* This will do the work necessary to connect the back end system to the Twitch
+ * channel of the currently authorized user. We set up a couple of simple event
+ * listeners here to allow us to monitor the system. */
+async function setupTwitchChat() {
+  // If we've already set up Twitch chat or haven't set up Twitch access, we
+  // can't proceed.
+  if (chatClient !== undefined || authProvider === undefined) {
+    return;
+  }
+
+  // Set up the name of the channel we're going to be sending to, which is the
+  // username of the authorized user.
+  chatChannel = userInfo.name;
+
+  // Create a chat client using the global authorization provider.
+  chatClient = new ChatClient({
+    authProvider,
+    channels: [chatChannel],
+    botLevel: "known",   // "none", "known" or "verified"
+
+    // When this is true, the code assumes that the bot account is a mod and
+    // uses a different rate limiter. If the bot is not ACTUALLY a mod and you
+    // do this, you may end up getting it throttled, which is Not Good (tm).
+    isAlwaysMod: true,
+  });
+
+  // Set up the listeners for chat events that we're interested in handling;
+  // these are captured into a list so we can destroy them later.
+  chatListeners = [
+    // Display a notification when the chat connects,.
+    chatClient.onConnect(() => {
+      console.log('Twitch chat connection established');
+    }),
+
+    // Display a notification when the chat disconnects.
+    chatClient.onDisconnect((_manually, _reason) => {
+      console.log('Twitch chat has been disconnected');
+    }),
+
+    // Handle a situation in which authentication of the bot failed; this would
+    // happen if the bot user redacts our ability to talk to chat from within
+    // Twitch without disconnecting in the app, for example.
+    chatClient.onAuthenticationFailure(message => {
+      console.log(`Twitch chat Authentication failed: ${message}`);
+    }),
+
+    // As a part of the connection mechanism, we also need to tell the server
+    // what name we're known by. Once that happens, this event triggers.
+    chatClient.onRegister(() => {
+      console.log(`Registered with Twitch chat as ${chatClient.currentNick}`);
+    }),
+
+    // Handle cases where sending messages fails due to being rate limited or
+    // other reasons.
+    chatClient.onMessageFailed((channel, reason) => console.log(`${channel}: message send failed: ${reason}`)),
+    chatClient.onMessageRatelimit((channel, message) => console.log(`${channel}: rate limit hit; did not send: ${message}`)),
+  ]
+
+  // We're done, so indicate that we're connecting to twitch.
+  console.log(`Connecting to Twitch chat and joining channel ${chatChannel}`);
+  await chatClient.connect();
+}
+
+
+// =============================================================================
+
+
+/* This will tear down (if it was set up) the Twitch chat functionality; once
+ * this is called, it will no longer be possible to send messages to chat until
+ * the chat connection is manually re-established. */
+function leaveTwitchChat() {
+  // If we're not in the chat right now, we can leave without doing anything/
+  if (chatClient === undefined || chatListeners === undefined) {
+    return;
+  }
+
+  // Actively leave the chat, and then remove all of of the listeners that are
+  // associated with it so that we can remove the instance; otherwise they will
+  // hold onto it's reference.
+  chatClient.quit();
+  for (const listener in chatListeners) {
+    chatClient.removeListener(listener);
+  }
+
+  // Clobber away the values that tell us that we're connected to the chat.
+  chatListeners = undefined;
+  chatClient = undefined;
+  chatChannel = undefined;
+}
+
 
 // =============================================================================
 
@@ -409,6 +518,7 @@ app.get('/deauth', async (req, res) => {
     // Shut down our access to Twitch; this will remove all cached information and
     // stop us from receiving messages or talking to the API.
     shutdownTwitchAccess();
+    leaveTwitchChat();
 
     const model = await db.model('tokens', TokenSchema);
     await model.remove({ id: 1 });
@@ -478,8 +588,11 @@ app.get('/auth/twitch', async (req, res) => {
       expiresIn: token.expiresIn,
     });
 
-    // Set up our access
+    // Set up our access to Twitch and to Chat; we're specifically not bothering
+    // to wait for the Twitch chat to connect; that promise can resolve on its
+    // own.
     await setupTwitchAccess(model, token);
+    setupTwitchChat();
   }
 
   return res.redirect('/');
@@ -510,7 +623,8 @@ async function setup() {
   if (token !== undefined) {
     token.accessToken = decrypt(token.accessToken);
     token.refreshToken = decrypt(token.refreshToken);
-    setupTwitchAccess(model, token);
+    await setupTwitchAccess(model, token);
+    setupTwitchChat();
   }
 }
 
