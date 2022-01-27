@@ -120,6 +120,13 @@ function handleRedemption(msg) {
     authorized: true, userName: userInfo.displayName
   });
 
+  // If the incoming redemption is special, do something special with it.
+  //
+  // This particularl hard coded redeem ID is the one for the /dev/null redeem.
+  if (msg.rewardId === '648252cf-1b6d-409a-a901-1764f5abdd28') {
+    // chatSay('$heckle')
+  }
+
   console.log(`channelId: ${msg.channelId}`);              // channelId: 66586458
   console.log(`defaultImage: ${msg.defaultImage}`);        // defaultImage: [object Object]
   console.log(`id: ${msg.id}`);                            // id: d113cb94-13d3-487f-ab40-dd1d707df4e2
@@ -302,6 +309,7 @@ async function setupTwitchChat() {
     // what name we're known by. Once that happens, this event triggers.
     chatClient.onRegister(() => {
       console.log(`Registered with Twitch chat as ${chatClient.currentNick}`);
+      chatSay('Good news everyone, I have arrived!')
     }),
 
     // Handle cases where sending messages fails due to being rate limited or
@@ -322,11 +330,13 @@ async function setupTwitchChat() {
 /* This will tear down (if it was set up) the Twitch chat functionality; once
  * this is called, it will no longer be possible to send messages to chat until
  * the chat connection is manually re-established. */
-function leaveTwitchChat() {
+async function leaveTwitchChat() {
   // If we're not in the chat right now, we can leave without doing anything/
   if (chatClient === undefined || chatListeners === undefined) {
     return;
   }
+
+  await chatDo('peaces out');
 
   // Actively leave the chat, and then remove all of of the listeners that are
   // associated with it so that we can remove the instance; otherwise they will
@@ -340,6 +350,40 @@ function leaveTwitchChat() {
   chatListeners = undefined;
   chatClient = undefined;
   chatChannel = undefined;
+}
+
+
+// =============================================================================
+
+
+/* Transmit a normal chat message to the chat as the currently authorized user;
+ * if there is no user currently authorized, then this will do nothing.
+ *
+ * The message can optionally be a reply to another message; to do that you need
+ * to pass the ID of the message you're replying to so that Twitch can associate
+ * the reply with the source message. */
+async function chatSay(text, replyTo) {
+  if (chatClient === undefined) {
+    return;
+  }
+
+  console.log(`${chatChannel}:<${chatChannel}> ${text}`);
+  return chatClient.say(chatChannel, text, {replyTo: replyTo});
+}
+
+
+// =============================================================================
+
+
+/* Transmit an action message to the chat as the currently authorized user; if
+ * there is no user currently authorized, then this will do nothing. */
+async function chatDo(action) {
+  if (chatClient === undefined) {
+    return;
+  }
+
+  console.log(`${chatChannel}:*${chatChannel} ${action}`);
+  return chatClient.action(chatChannel, action);
 }
 
 
