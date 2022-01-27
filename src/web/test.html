@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Speedpaint Giveaway</title>
+  <style type="text/css">
+    body {
+      /*background: #0B161D;*/
+      background: #252525;
+      color: white;
+    }
+
+    button, input {
+      box-sizing: border-box;
+      padding: 0.5em;
+      margin-bottom: 1em;
+      width: 50%;
+    }
+
+    h3 {
+      border-bottom: 1px solid;
+    }
+
+    input {
+      width: 25%;
+    }
+
+    #bits-test-container {
+      /*display: none;*/
+    }
+
+    #sub-test-container {
+      /*display: none;*/
+    }
+  </style>
+</head>
+<body>
+
+<div id="bits-test-container">
+  <h3>Bits</h3>
+  <input id="bits-test-user" type="text" placeholder="user">
+  <input id="bits-test-bits" type="text" placeholder="bits">
+  <button id="bits-test">Bits Test</button>
+</div>
+
+<div id="sub-test-container">
+  <h3>Subscription</h3>
+  <input id="sub-test-user" type="text" placeholder="gifter">
+  <input id="sub-test-sub" type="text" placeholder="subs gifted">
+  <button id="sub-test">Subscription Test</button>
+</div>
+
+<script type="module">
+  // Bring in our websocket library.
+  const getWebSocket = require('./websocket');
+
+  function setupTestButtons() {
+    const bitsUserTextBox = document.getElementById('bits-test-user');
+    const bitsTextBox = document.getElementById('bits-test-bits');
+    const bitsButton = document.getElementById('bits-test');
+    bitsButton.addEventListener('click', async () => {
+      await window.fetch('/test/bits', {
+        method: 'post',
+        body: JSON.stringify({
+          bits: Math.trunc(bitsTextBox.value),
+          isAnonymous: false,
+          message: 'This is a test bits message',
+          totalBits: 1454,
+          userId: 136337257,
+          userName : bitsUserTextBox.value,
+        }),
+        headers: {'Content-Type': 'application/json'}
+      });
+    });
+
+    const gifterTextBox = document.getElementById('sub-test-user');
+    const subsTextBox = document.getElementById('sub-test-sub');
+    const subButton = document.getElementById('sub-test');
+    subButton.addEventListener('click', async () => {
+      let x = await Promise.all(Array(Math.trunc(subsTextBox.value))
+        .fill(null).map(
+            () => window.fetch('/test/subs', {
+              method: 'post',
+              body: JSON.stringify({
+                cumulativeMonths: 1,
+                giftDuration: 1,
+                gifterDisplayName: gifterTextBox.value,
+                gifterId: 499189939,
+                gifterName: gifterTextBox.value,
+                isAnonymous: false,
+                isGift: true,
+                isResub: false,
+                message: null,
+                months: 1,
+                streakMonths: 0,
+                subPlan: 1000,
+                time: new Date(),
+                userDisplayName: 'PhutBot',
+                userId: 56740791,
+                userName: 'phutbot'
+              }),
+              headers: {'Content-Type': 'application/json'}
+            })
+
+        )
+      );
+    });
+  }
+
+  // Set up our testing buttons.
+  setupTestButtons();
+
+  // Connected to the server.
+  const socket = getWebSocket(location.hostname, 4040);
+
+  socket.on("twitch-bits", data => {
+    console.log(data);
+  });
+
+  socket.on("twitch-sub", data => {
+    console.log(data);
+  })
+
+</script>
+</body>
+</html>

@@ -14,7 +14,8 @@
     "default": {
       "source": [
         "src/web/index.html",
-        "src/web/overlay.html"
+        "src/web/overlay.html",
+        "src/web/test.html"
       ],
       "distDir": "./public"
     }
