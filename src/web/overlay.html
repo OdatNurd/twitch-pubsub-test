@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Speedpaint Giveaway Overlay</title>
   <style type="text/css">
+    body {
+      background-color: #252525;
+    }
+
     .hide {
       display: none !important;
     }
@@ -32,7 +36,7 @@
       const text = document.getElementById('text');
       if (authorized === true) {
         text.classList.remove('hide');
-        text.innerText = `I am ${username}'s overlay and hopefully you can see me`;
+        text.innerText = `${username} has their account authorized for the overlay`;
       } else {
         text.classList.add('hide');
       }
