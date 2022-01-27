@@ -11,27 +11,22 @@
       color: white;
     }
 
-    button, input {
-      box-sizing: border-box;
-      padding: 0.5em;
-      margin-bottom: 1em;
-      width: 50%;
-    }
-
     h3 {
       border-bottom: 1px solid;
     }
 
-    input {
+    button, input {
+      box-sizing: border-box;
+      padding: 0.5em;
+      margin-bottom: 1em;
+    }
+
+    button {
+      width: 50%;
+    }
+
+    input[type='text'] {
       width: 25%;
-    }
-
-    #bits-test-container {
-      /*display: none;*/
-    }
-
-    #sub-test-container {
-      /*display: none;*/
     }
   </style>
 </head>
@@ -39,15 +34,22 @@
 
 <div id="bits-test-container">
   <h3>Bits</h3>
-  <input id="bits-test-user" type="text" placeholder="user">
-  <input id="bits-test-bits" type="text" placeholder="bits">
-  <button id="bits-test">Bits Test</button>
+  <input id="bits-user" type="text" placeholder="user who is throwing bits">
+  <input id="bits-amount" type="text" placeholder="bits thrown">
+  <input id="bits-anon" type="checkbox" name="bits-anon">
+  <label for="bits-anon">Throw bits anonymously</label>
+  <button id="bits-btn">Bits Test</button>
 </div>
 
 <div id="sub-test-container">
   <h3>Subscription</h3>
-  <input id="sub-test-user" type="text" placeholder="gifter">
-  <input id="sub-test-sub" type="text" placeholder="subs gifted">
+  <input id="sub-gifter" type="text" placeholder="user doing subscription">
+  <input id="sub-amount" type="text" placeholder="number of subscriptions">
+  <input id="sub-is-gift" type="checkbox" name="sub-is-gift" checked>
+  <label for="sub-is-gift">Subscription is a gift</label>
+  <input id="sub-anon" type="checkbox" name="sub-anon">
+  <label for="sub-anon">Gift anonymously</label>
+
   <button id="sub-test">Subscription Test</button>
 </div>
 
@@ -55,61 +57,66 @@
   // Bring in our websocket library.
   const getWebSocket = require('./websocket');
 
-  function setupTestButtons() {
-    const bitsUserTextBox = document.getElementById('bits-test-user');
-    const bitsTextBox = document.getElementById('bits-test-bits');
-    const bitsButton = document.getElementById('bits-test');
-    bitsButton.addEventListener('click', async () => {
-      await window.fetch('/test/bits', {
-        method: 'post',
-        body: JSON.stringify({
-          bits: Math.trunc(bitsTextBox.value),
-          isAnonymous: false,
-          message: 'This is a test bits message',
-          totalBits: 1454,
-          userId: 136337257,
-          userName : bitsUserTextBox.value,
-        }),
-        headers: {'Content-Type': 'application/json'}
-      });
+  const bUser = document.getElementById('bits-user');
+  const bBits = document.getElementById('bits-amount');
+  const bAnon = document.getElementById('bits-anon');
+  const bTrigger = document.getElementById('bits-btn');
+
+  bTrigger.addEventListener('click', async () => {
+    await window.fetch('/test/bits', {
+      method: 'post',
+      body: JSON.stringify({
+        bits: Math.trunc(bBits.value),
+        isAnonymous: bAnon.checked,
+        message: 'This is a test bits message',
+        totalBits: 1454,
+        userId: bAnon.checked ? null : 136337257,
+        userName : bAnon.checked ? null : bUser.value,
+      }),
+      headers: {'Content-Type': 'application/json'}
     });
+  });
 
-    const gifterTextBox = document.getElementById('sub-test-user');
-    const subsTextBox = document.getElementById('sub-test-sub');
-    const subButton = document.getElementById('sub-test');
-    subButton.addEventListener('click', async () => {
-      let x = await Promise.all(Array(Math.trunc(subsTextBox.value))
-        .fill(null).map(
-            () => window.fetch('/test/subs', {
-              method: 'post',
-              body: JSON.stringify({
-                cumulativeMonths: 1,
-                giftDuration: 1,
-                gifterDisplayName: gifterTextBox.value,
-                gifterId: 499189939,
-                gifterName: gifterTextBox.value,
-                isAnonymous: false,
-                isGift: true,
-                isResub: false,
-                message: null,
-                months: 1,
-                streakMonths: 0,
-                subPlan: 1000,
-                time: new Date(),
-                userDisplayName: 'PhutBot',
-                userId: 56740791,
-                userName: 'phutbot'
-              }),
-              headers: {'Content-Type': 'application/json'}
-            })
+  const sGifter = document.getElementById('sub-gifter');
+  const sSubCount = document.getElementById('sub-amount');
+  const sStrigger = document.getElementById('sub-test');
+  const sGift = document.getElementById('sub-is-gift');
+  const sAnon = document.getElementById('sub-anon');
 
-        )
-      );
-    });
-  }
+  // Get the sub count; if this isn't a gifted sub, it's always just a single
+  // sub no matter what the form says because you can't subscribe yourself
+  // several times in a row.
+  sStrigger.addEventListener('click', async () => {
+    const count = sGift.checked ? Math.trunc(sSubCount.value) : 1;
+    const gifter = sAnon.checked ? null : sGifter.value;
+    await Promise.all(Array(count)
+      .fill(null).map(
+          () => window.fetch('/test/subs', {
+            method: 'post',
+            body: JSON.stringify({
+              cumulativeMonths: 1,
+              giftDuration: sGift.checked ? 1 : null,
+              gifterDisplayName: sGift.checked ? gifter : null,
+              gifterId: sGift.checked ? 499189939 : null,
+              gifterName: sGift.checked ? gifter : null,
+              isAnonymous: sAnon.checked,
+              isGift: sGift.checked,
+              isResub: false,
+              message: null,
+              months: 1,
+              streakMonths: 0,
+              subPlan: 1000,
+              time: new Date(),
+              userDisplayName: sGift.checked ? 'PhutBot' : sGifter.value,
+              userId: 56740791,
+              userName: sGift.checked ? 'phutbot' : sGifter.value
+            }),
+            headers: {'Content-Type': 'application/json'}
+          })
+      )
+    );
+  });
 
-  // Set up our testing buttons.
-  setupTestButtons();
 
   // Connected to the server.
   const socket = getWebSocket(location.hostname, 4040);

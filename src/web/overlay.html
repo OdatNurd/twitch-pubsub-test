@@ -53,6 +53,14 @@
     socket.on("twitch-auth", data => {
       setupTextBox(data.authorized, data.userName);
     });
+
+    socket.on("twitch-bits", data => {
+      console.log(data);
+    });
+
+    socket.on("twitch-sub", data => {
+      console.log(data);
+    })
   </script>
 </body>
 </html>

@@ -155,6 +155,7 @@ function handleSubscription(msg) {
   sendSocketMessage('twitch-sub', {
     gifterDisplayName: msg.gifterDisplayName,
     gifterId: msg.gifterId,
+    isAnonymous: msg.isAnonymous,
     userDisplayName: msg.userDisplayName,
     userId: msg.userId,
   });
