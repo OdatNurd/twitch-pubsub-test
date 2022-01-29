@@ -15,7 +15,7 @@
       border-bottom: 1px solid;
     }
 
-    button, input {
+    button, input, select {
       box-sizing: border-box;
       padding: 0.5em;
       margin-bottom: 1em;
@@ -25,53 +25,73 @@
       width: 50%;
     }
 
-    input[type='text'] {
+    select, input[type='text'] {
       width: 25%;
     }
+
   </style>
 </head>
 <body>
 
 <div id="bits-test-container">
   <h3>Bits</h3>
-  <input id="bits-user" type="text" placeholder="user who is throwing bits">
+  <select id="bits-user">
+  </select>
   <input id="bits-amount" type="text" placeholder="bits thrown">
-  <input id="bits-anon" type="checkbox" name="bits-anon">
-  <label for="bits-anon">Throw bits anonymously</label>
   <button id="bits-btn">Bits Test</button>
 </div>
 
 <div id="sub-test-container">
   <h3>Subscription</h3>
-  <input id="sub-gifter" type="text" placeholder="user doing subscription">
+  <select id="sub-gifter">
+  </select>
   <input id="sub-amount" type="text" placeholder="number of subscriptions">
   <input id="sub-is-gift" type="checkbox" name="sub-is-gift" checked>
   <label for="sub-is-gift">Subscription is a gift</label>
-  <input id="sub-anon" type="checkbox" name="sub-anon">
-  <label for="sub-anon">Gift anonymously</label>
 
   <button id="sub-test">Subscription Test</button>
 </div>
 
 <script type="module">
-  // Bring in our websocket library.
+  // Bring in our websocket library and test data.
   const getWebSocket = require('./websocket');
+  const testData = require('./test_users');
+
+  /* Given a select element in the page, add appropriate option tags to allow
+   * for selecting a user from the list; the list will use the display name as
+   * the text and the userID as the value. */
+  function addTestUserOptions(selectTag) {
+    // Add an option group for each file, and inside of the group all of the
+    // items contained within that file.
+    Object.keys(testData).forEach(userId => {
+      const tag = document.createElement('option');
+      tag.value = userId;
+      tag.innerText = userId === "Anonymous" ? userId : testData[userId].displayName;
+
+      selectTag.append(tag);
+    })
+  }
 
   const bUser = document.getElementById('bits-user');
   const bBits = document.getElementById('bits-amount');
-  const bAnon = document.getElementById('bits-anon');
   const bTrigger = document.getElementById('bits-btn');
 
+  // Set up the select tag with the list of test users.
+  addTestUserOptions(bUser);
+
   bTrigger.addEventListener('click', async () => {
+    const isAnonymous = (bUser.value === 'Anonymous');
+    const userInfo = isAnonymous ? testData["Anonymous"] : testData[bUser.value];
+
     await window.fetch('/test/bits', {
       method: 'post',
       body: JSON.stringify({
         bits: Math.trunc(bBits.value),
-        isAnonymous: bAnon.checked,
+        isAnonymous,
         message: 'This is a test bits message',
         totalBits: 1454,
-        userId: bAnon.checked ? null : 136337257,
-        userName : bAnon.checked ? null : bUser.value,
+        userId: userInfo.userId,
+        userName: userInfo.userName,
       }),
       headers: {'Content-Type': 'application/json'}
     });
@@ -81,35 +101,56 @@
   const sSubCount = document.getElementById('sub-amount');
   const sStrigger = document.getElementById('sub-test');
   const sGift = document.getElementById('sub-is-gift');
-  const sAnon = document.getElementById('sub-anon');
+
+  // Set up the select tag with the list of test users.
+  addTestUserOptions(sGifter);
 
   // Get the sub count; if this isn't a gifted sub, it's always just a single
   // sub no matter what the form says because you can't subscribe yourself
   // several times in a row.
   sStrigger.addEventListener('click', async () => {
-    const count = sGift.checked ? Math.trunc(sSubCount.value) : 1;
-    const gifter = sAnon.checked ? null : sGifter.value;
+    const isAnonymous = (sGifter.value === 'Anonymous');
+    const isGift = sGift.checked;
+
+    // Who's the gifter here? If this is not a gift, then the "anonymous" user
+    // is the gifter (i.e. nobody); otherwise it's the user that was selected in
+    // the box, which could in fact be the anonymous user if this is an
+    // anonymous gift.
+    const gifter = isGift ? (isAnonymous ? testData['Anonymous'] : testData[sGifter.value])
+                          : testData['Anonymous'];
+
+    // Who's getting the sub? If this is a gift, then we randomly pick the user
+    // being gifted. If it's not a gift, then it's the user selected in the box.
+    // In the case that that user is anonymous, we need to randomly pick a name
+    // here because subs can't be anonymous, only the gifter can.
+    const giftee = isGift ? testData['56740791']
+                          : (isAnonymous ? testData["66586458"] : testData[sGifter.value]);
+
+    // What's the gift sub count? This is the value given in the text box, but
+    // will force itself to be a single if this isn't a gift sub.
+    const count = isGift ? Math.trunc(sSubCount.value) : 1;
+
     await Promise.all(Array(count)
       .fill(null).map(
           () => window.fetch('/test/subs', {
             method: 'post',
             body: JSON.stringify({
               cumulativeMonths: 1,
-              giftDuration: sGift.checked ? 1 : null,
-              gifterDisplayName: sGift.checked ? gifter : null,
-              gifterId: sGift.checked ? 499189939 : null,
-              gifterName: sGift.checked ? gifter : null,
-              isAnonymous: sAnon.checked,
-              isGift: sGift.checked,
+              giftDuration: isGift ? 1 : null,
+              gifterDisplayName: gifter.displayName,
+              gifterId: gifter.userId,
+              gifterName: gifter.userName,
+              isAnonymous: isAnonymous,
+              isGift: isGift,
               isResub: false,
               message: null,
               months: 1,
               streakMonths: 0,
               subPlan: 1000,
               time: new Date(),
-              userDisplayName: sGift.checked ? 'PhutBot' : sGifter.value,
-              userId: 56740791,
-              userName: sGift.checked ? 'phutbot' : sGifter.value
+              userDisplayName: giftee.displayName,
+              userId: giftee.userId,
+              userName: giftee.userName
             }),
             headers: {'Content-Type': 'application/json'}
           })
