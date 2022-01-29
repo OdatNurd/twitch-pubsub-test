@@ -8,14 +8,14 @@
   "scripts": {
     "build": "parcel build",
     "watch": "parcel watch",
-    "start": "node src/index.js"
+    "start": "node src/server/index.js"
   },
   "targets": {
     "default": {
       "source": [
-        "src/web/index.html",
-        "src/web/overlay.html",
-        "src/web/test.html"
+        "src/client/panel/index.html",
+        "src/client/panel/test.html",
+        "src/client/overlay/index.html"
       ],
       "distDir": "./public"
     }

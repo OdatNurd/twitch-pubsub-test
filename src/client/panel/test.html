@@ -5,30 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Speedpaint Giveaway</title>
   <style type="text/css">
-    body {
-      /*background: #0B161D;*/
-      background: #252525;
-      color: white;
-    }
-
-    h3 {
-      border-bottom: 1px solid;
-    }
-
-    button, input, select {
-      box-sizing: border-box;
-      padding: 0.5em;
-      margin-bottom: 1em;
-    }
-
-    button {
-      width: 50%;
-    }
-
-    select, input[type='text'] {
-      width: 25%;
-    }
-
+    @import '../common/css/style.css';
   </style>
 </head>
 <body>
@@ -54,7 +31,7 @@
 
 <script type="module">
   // Bring in our websocket library and test data.
-  const getWebSocket = require('./websocket');
+  const getWebSocket = require('../common/js/websocket');
   const testData = require('./test_users');
 
   /* Given a select element in the page, add appropriate option tags to allow

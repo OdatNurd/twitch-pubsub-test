@@ -127,6 +127,7 @@ function handleRedemption(msg) {
     // chatSay('$heckle')
   }
 
+  console.log("-----------------------------");
   console.log(`channelId: ${msg.channelId}`);              // channelId: 66586458
   console.log(`defaultImage: ${msg.defaultImage}`);        // defaultImage: [object Object]
   console.log(`id: ${msg.id}`);                            // id: d113cb94-13d3-487f-ab40-dd1d707df4e2
@@ -142,6 +143,7 @@ function handleRedemption(msg) {
   console.log(`userDisplayName: ${msg.userDisplayName}`);  // userDisplayName: OdatNurd
   console.log(`userId: ${msg.userId}`);                    // userId: 66586458
   console.log(`userName: ${msg.userName}`);                // userName: odatnurd
+  console.log("-----------------------------");
 };
 
 
@@ -160,6 +162,7 @@ function handleSubscription(msg) {
     userId: msg.userId,
   });
 
+  console.log("-----------------------------");
   console.log(`cumulativeMonths: ${msg.cumulativeMonths}`);   // cumulativeMonths: 11                                            cumulativeMonths: 1
   console.log(`giftDuration: ${msg.giftDuration}`);           // giftDuration: null                                              giftDuration: 1
   console.log(`gifterDisplayName: ${msg.gifterDisplayName}`); // gifterDisplayName: null                                         gifterDisplayName: marisuemartin
@@ -176,6 +179,7 @@ function handleSubscription(msg) {
   console.log(`userDisplayName: ${msg.userDisplayName}`);     // userDisplayName: marisuemartin                                  userDisplayName: PhutBot
   console.log(`userId: ${msg.userId}`);                       // userId: 499189939                                               userId: 56740791
   console.log(`userName: ${msg.userName}`);                   // userName: marisuemartin                                         userName: phutbot
+  console.log("-----------------------------");
 };
 
 // =============================================================================
@@ -193,12 +197,14 @@ function handleBits(msg) {
     userName : msg.userName,
   });
 
+  console.log("-----------------------------");
   console.log(`bits: ${msg.bits}`);                // bits: 100
   console.log(`isAnonymous: ${msg.isAnonymous}`);  // isAnonymous: false
   console.log(`message: ${msg.message}`);          // message: SeemsGood100
   console.log(`totalBits: ${msg.totalBits}`);      // totalBits: 1454
   console.log(`userId: ${msg.userId}`);            // userId: 136337257
   console.log(`userName: ${msg.userName}`);        // userName: valleydweller
+  console.log("-----------------------------");
 };
 
 // =============================================================================
@@ -526,7 +532,7 @@ app.get('/auth', (req, res) => {
   // So in that case, we can just leave.
   if (authProvider !== undefined) {
     console.log('The user is already authenticated; stopping the auth flow');
-    return res.redirect('/');
+    return res.redirect('/panel/');
   }
 
   // When we make our request to Twitch, we provide it a random state string; it
@@ -569,7 +575,7 @@ app.get('/deauth', async (req, res) => {
     await model.remove({ id: 1 });
   }
 
-  res.redirect('/');
+  res.redirect('/panel/');
 });
 
 app.post('/test/bits', async (req, res) => {
@@ -605,7 +611,7 @@ app.get('/auth/twitch', async (req, res) => {
   // started it to know who you're authorizing.
   if (req.query.state !== state) {
     console.log(`auth callback got out of date authorization code; potential spoof?`);
-    return res.redirect('/');
+    return res.redirect('/panel/');
   }
 
   // If the user actually authorizes us, then Twitch sends us a code that we can
@@ -640,7 +646,7 @@ app.get('/auth/twitch', async (req, res) => {
     setupTwitchChat();
   }
 
-  return res.redirect('/');
+  return res.redirect('/panel/');
 });
 
 /* Set up some middleware that will serve static files out of the public folder

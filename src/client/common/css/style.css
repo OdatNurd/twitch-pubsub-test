@@ -1,0 +1,27 @@
+body {
+  /*background: #0B161D;*/
+  background: #252525;
+  color: white;
+}
+
+h3 {
+  border-bottom: 1px solid;
+}
+
+button, input, select {
+  box-sizing: border-box;
+  padding: 0.5em;
+  margin-bottom: 1em;
+}
+
+button {
+  width: 50%;
+}
+
+#authorize-btn {
+  width: 100%;
+}
+
+select, input[type='text'] {
+  width: 25%;
+}
