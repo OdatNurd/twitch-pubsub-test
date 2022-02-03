@@ -15,13 +15,9 @@ button, input, select {
 }
 
 button {
-  width: 50%;
-}
-
-#authorize-btn {
   width: 100%;
 }
 
 select, input[type='text'] {
-  width: 25%;
+  width: 100%;
 }
