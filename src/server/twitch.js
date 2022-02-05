@@ -1,6 +1,8 @@
 // =============================================================================
 
 
+const { config } = require('./config');
+
 const { RefreshingAuthProvider, exchangeCode } = require('@twurple/auth');
 const { ApiClient } = require('@twurple/api');
 
@@ -25,10 +27,15 @@ const bot_token_scopes = ['chat:read', 'chat:edit',
 // =============================================================================
 
 
-/* The port on which the application listens and the URI that Twitch should
- * redirect back to whenever we communicate with it. */
-const webPort = 3030;
-const redirect_uri = `http://localhost:${webPort}/auth/twitch`
+/* Whenever we redirect to Twitch to do authorization, Twitch needs to know how
+ * to redirect the page back to our application. In addition, some requests
+ * require that we provide this even though it's not used (such as when
+ * exchanging our token code for an actual token). */
+const redirect_uri = config.get('twitch.callbackURL');
+
+/* The ClientID asd ClientSecret of the underlying application. */
+const clientId = config.get('twitch.clientId');
+const clientSecret = config.get('twitch.clientSecret');
 
 /* When a Twitch authorization is in progress, this represents the state code
  * that was passed to Twitch when we redirected there. Twitch will send this
@@ -77,8 +84,8 @@ async function setupTwitchAccess(model, token) {
   // if the application is long lived the token will be refreshed as needed.
   twitch.authProvider = new RefreshingAuthProvider(
     {
-      clientId: process.env.TWITCHLOYALTY_CLIENT_ID,
-      clientSecret: process.env.TWITCHLOYALTY_CLIENT_SECRET,
+      clientId: clientId,
+      clientSecret: clientSecret,
       onRefresh: async newData => {
         console.log(`Refreshing user token`);
         await model.update({ id: 1 }, {
@@ -169,7 +176,7 @@ function handleAuthRoute(req, res) {
   // originally started them.
   state = uuidv4();
   const params = {
-    client_id: process.env.TWITCHLOYALTY_CLIENT_ID,
+    client_id: clientId,
     redirect_uri,
     force_verify: true,
     response_type: 'code',
@@ -242,8 +249,8 @@ async function handleTwitchRedirectRoute(model, req, res) {
     // Exchange the code we were given with Twitch to get an access code. This
     // makes a request to the Twitch back end.
     const token = await exchangeCode(
-      process.env.TWITCHLOYALTY_CLIENT_ID,
-      process.env.TWITCHLOYALTY_CLIENT_SECRET,
+      clientId,
+      clientSecret,
       code, redirect_uri);
 
     // Persist the token into the database; here we also encrypt the access and

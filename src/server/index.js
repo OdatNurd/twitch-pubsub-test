@@ -2,6 +2,8 @@
 
 require('dotenv').config();
 
+const { config } = require('./config');
+
 const { SingleUserPubSubClient } = require('@twurple/pubsub');
 
 const express = require('express');
@@ -21,6 +23,8 @@ const { setupTwitchChat, leaveTwitchChat, chatSay, chatDo } = require('./chat');
 /* Try to load an existing token from the database, and if we find one, use it
  * to set up the database. */
 async function launch() {
+  console.log(config.toString());
+
   // The handle to the database that we use to persist information between runs,
   // such as our tokens and the current leaderboards (for example).
   const db = await initializeDatabase();
@@ -30,9 +34,8 @@ async function launch() {
   const app = express();
   app.use(express.json());
 
-  // The port on which the application listens: this is also duplicated in the
-  // Twitch code for dumb reasons.
-  const webPort = 3030;
+  // Pull out the port on which the web server listens.
+  const webPort = config.get('server.webPort');
 
   // This route kicks off our authorization with twitch. It will store some
   // local information and then redirect to Twitch to allow Twitch to carry out
@@ -63,6 +66,13 @@ async function launch() {
     handleTwitchRedirectRoute(model, req, res);
   });
 
+  // Handle requests from clients that want to know what port we serve our
+  // websockets from, so that they know where to connect. This port is
+  // controlled by the server.
+  app.get('/config', async (req, res) => {
+    res.json({socketPort: config.get('server.socketPort')});
+  });
+
   // This simple test route allows the test panel to generate a fake bits
   // message so that we can more easily do testing.
   app.post('/test/bits', async (req, res) => {
@@ -83,7 +93,7 @@ async function launch() {
 
   // Get the server to listen for incoming requests.
   app.listen(webPort, () => {
-      console.log(`Listening for requests on http://localhost:${webPort}`);
+      console.log(`Listening for web requests on http://localhost:${webPort}`);
   });
 
   // Start up the WebSocket listener

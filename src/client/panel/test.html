@@ -30,7 +30,9 @@
 </div>
 
 <script type="module">
-  // Bring in our websocket library and test data.
+  // Bring in our websocket library and the configuration function, as well as
+  // our test data.
+  const getConfig = require('../common/js/config');
   const getWebSocket = require('../common/js/websocket');
   const testData = require('./test_users');
 
@@ -135,18 +137,23 @@
     );
   });
 
+  // Perform our setup actions.
+  async function setup() {
+    // Get our configuration, and then use it to connect to the back end so
+    // that we can communicate with it and get events.
+    const config = await getConfig();
+    const socket = getWebSocket(location.hostname, config.socketPort);
 
-  // Connected to the server.
-  const socket = getWebSocket(location.hostname, 4040);
+    socket.on("twitch-bits", data => {
+      console.log(data);
+    });
 
-  socket.on("twitch-bits", data => {
-    console.log(data);
-  });
+    socket.on("twitch-sub", data => {
+      console.log(data);
+    });
+  }
 
-  socket.on("twitch-sub", data => {
-    console.log(data);
-  })
-
+  setup();
 </script>
 </body>
 </html>

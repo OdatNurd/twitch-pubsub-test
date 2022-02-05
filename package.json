@@ -27,6 +27,8 @@
     "@twurple/chat": "^5.0.13",
     "dotenv": "^12.0.3",
     "express": "^4.17.2",
+    "convict": "^6.2.1",
+    "json5": "^2.2.0",
     "sqlite3": "^5.0.2",
     "trilogy": "^2.0.5",
     "uuid": "^8.3.2",

@@ -1,6 +1,7 @@
 // =============================================================================
 
 
+const { config } = require('./config');
 const crypto = require('crypto');
 
 
@@ -11,6 +12,11 @@ const crypto = require('crypto');
  * ensure that casual inspection doesn't leak anything important. This sets the
  * algorithm that is used for the encryption. */
 const algorithm = 'aes-256-ctr';
+
+/* The secret to use when performing encryption and decryption; if this changes
+ * after data has been encrypted into the database, that data will be rendered
+ * unreadable. */
+const cryptSecret = config.get('crypto.secret');
 
 
 // =============================================================================
@@ -25,7 +31,7 @@ function encrypt(text) {
     const iv = crypto.randomBytes(16);
 
     // Do the encryption on the data, leaving it in an encrypted buffer.
-    const cipher = crypto.createCipheriv(algorithm, process.env.TWITCHLOYALTY_CRYPTO_SECRET, iv);
+    const cipher = crypto.createCipheriv(algorithm, cryptSecret, iv);
     const encrypted = Buffer.concat([cipher.update(text), cipher.final()]);
 
     // The returned value needs to contain the initialization vector used during
@@ -54,7 +60,7 @@ function decrypt(text) {
     const iv = Buffer.from(hash.iv, 'hex');
 
     // Create the object that will do the decrypt using the data from the hash
-    const decipher = crypto.createDecipheriv(algorithm, process.env.TWITCHLOYALTY_CRYPTO_SECRET, iv);
+    const decipher = crypto.createDecipheriv(algorithm, cryptSecret, iv);
     const content = Buffer.from(hash.content, 'hex');
 
     // Return the decrypted data.

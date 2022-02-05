@@ -1,6 +1,9 @@
 // =============================================================================
 
 
+const { config } = require('./config');
+
+const path = require('path');
 const trilogy = require('trilogy');
 
 
@@ -27,9 +30,13 @@ const TokenSchema = {
 /* Try to load an existing token from the database, and if we find one, use it
  * to set up the database. */
 async function initializeDatabase() {
+  // Get the configured database filename.
+  const baseDir = config.get('baseDir');
+  const dbFile = path.resolve(baseDir, config.get('database.filename'));
+
   // Connect to our database file on disk; this will create the file
   // automagically if it doesn't already exist.
-  const db = trilogy.connect('database.db');
+  const db = trilogy.connect(dbFile);
 
   // Make sure that we register our models with the database so that it knows
   // how to perform queries.

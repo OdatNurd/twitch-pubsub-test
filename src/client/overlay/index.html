@@ -26,7 +26,8 @@
   <div id="text" class="hide"></div>
 
   <script type="module">
-    // Bring in our websocket library.
+    // Bring in our websocket library and the configuration function
+    const getConfig = require('../common/js/config');
     const getWebSocket = require('../common/js/websocket');
 
     // Alter the link and text for the authorize button so that if the user is
@@ -45,22 +46,29 @@
     // By default, assume we're not authorized until we learn differently.
     setupTextBox(false);
 
-    // Connected to the server.
-    const socket = getWebSocket(location.hostname, 4040);
+    // Perform our setup actions.
+    async function setup() {
+      // Get our configuration, and then use it to connect to the back end so
+      // that we can communicate with it and get events.
+      const config = await getConfig();
+      const socket = getWebSocket(location.hostname, config.socketPort);
 
-    // When the Twitch authorization state changes, change the text in the
-    // overlay box.
-    socket.on("twitch-auth", data => {
-      setupTextBox(data.authorized, data.userName);
-    });
+      // When the Twitch authorization state changes, change the text in the
+      // overlay box.
+      socket.on("twitch-auth", data => {
+        setupTextBox(data.authorized, data.userName);
+      });
 
-    socket.on("twitch-bits", data => {
-      console.log(data);
-    });
+      socket.on("twitch-bits", data => {
+        console.log(data);
+      });
 
-    socket.on("twitch-sub", data => {
-      console.log(data);
-    })
+      socket.on("twitch-sub", data => {
+        console.log(data);
+      });
+    }
+
+    setup();
   </script>
 </body>
 </html>

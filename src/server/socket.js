@@ -1,6 +1,8 @@
 // =============================================================================
 
 
+const { config } = require('./config');
+
 const { Server } = require("ws");
 const WebSocketWrapper = require("ws-wrapper");
 
@@ -12,7 +14,7 @@ const WebSocketWrapper = require("ws-wrapper");
  * control page to talk to us and (by extension) each other. This sets the port
  * that's used, and the set holds the list of clients that are currently
  * connected so we can send them messages. */
-const socketPort = 4040;
+const socketPort = config.get('server.socketPort');
 let webClients = new Set();
 
 
@@ -29,6 +31,7 @@ let webClients = new Set();
  * given so that it can be transmitted out to connecting clients. */
 function setupWebSockets(twitch) {
   const server = new Server({ port: socketPort });
+  console.log(`Listening for socket requests on http://localhost:${socketPort}`);
 
   server.on("connection", (webSocket) => {
     console.log('=> incoming connection');
