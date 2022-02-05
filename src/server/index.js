@@ -11,7 +11,7 @@ const { initializeDatabase } = require('./db');
 const { setupWebSockets, sendSocketMessage } = require('./socket');
 
 const { twitch, setupTwitchAccess, shutdownTwitchAccess, handleAuthRoute, handleDeauthRoute, handleTwitchRedirectRoute } = require('./twitch');
-const { handleRedemption, handleSubscription, handleBits } = require('./pubsub');
+const { handleRedemption, handleSubscription, handleBits } = require('./handler');
 const { setupTwitchChat, leaveTwitchChat, chatSay, chatDo } = require('./chat');
 
 
