@@ -79,31 +79,42 @@ async function setupTwitchAccess(model, token) {
     return;
   }
 
-  // Create a Twurple authorization provider; this will take the token info as
-  // it was given and make sure that the tokens are always kept up to date; so
-  // if the application is long lived the token will be refreshed as needed.
-  twitch.authProvider = new RefreshingAuthProvider(
-    {
-      clientId: clientId,
-      clientSecret: clientSecret,
-      onRefresh: async newData => {
-        console.log(`Refreshing user token`);
-        await model.update({ id: 1 }, {
-          accessToken: encrypt(newData.accessToken),
-          refreshToken: encrypt(newData.refreshToken),
-          scopes: newData.scopes || [],
-          obtainmentTimestamp: newData.obtainmentTimestamp,
-          expiresIn: newData.expiresIn
-        });
-      }
-    },
-    token
-  );
+  try {
+    // Create a Twurple authorization provider; this will take the token info as
+    // it was given and make sure that the tokens are always kept up to date; so
+    // if the application is long lived the token will be refreshed as needed.
+    twitch.authProvider = new RefreshingAuthProvider(
+      {
+        clientId: clientId,
+        clientSecret: clientSecret,
+        onRefresh: async newData => {
+          console.log(`Refreshing user token`);
+          await model.update({ id: 1 }, {
+            accessToken: encrypt(newData.accessToken),
+            refreshToken: encrypt(newData.refreshToken),
+            scopes: newData.scopes || [],
+            obtainmentTimestamp: newData.obtainmentTimestamp,
+            expiresIn: newData.expiresIn
+          });
+        }
+      },
+      token
+    );
 
-  // Set up a Twitch API wrapper using the authorization provider, and then
-  // use it to gather information about the current user.
-  twitch.api = new ApiClient({ authProvider: twitch.authProvider });
-  twitch.userInfo = await twitch.api.users.getMe();
+    // Set up a Twitch API wrapper using the authorization provider, and then
+    // use it to gather information about the current user.
+    twitch.api = new ApiClient({ authProvider: twitch.authProvider });
+    twitch.userInfo = await twitch.api.users.getMe();
+  }
+  catch (e) {
+    // If there was an error, make sure that everyone knows that Twitch is not
+    // connected.
+    twitch.authProvider = undefined;
+    twitch.api = undefined;
+    twitch.userInfo = undefined
+
+    throw e;
+  }
 
   // Set up our PubSub client and listen for the events that will allow us to
   // track the leader board. Since we may need to remove these, we need to
@@ -194,11 +205,14 @@ function handleAuthRoute(req, res) {
 /* This route kicks off our de-authorization process, which will check to see if
  * we currently have an access token and, if we do, remove it before redirecting
  * back to the root page. */
-async function handleDeauthRoute(model, req, res) {
+async function handleDeauthRoute(db, req, res) {
   // If we are actually authorized, then remove authorization before we redirect
   // back. In the case where we're not authorized, skip calling these (even
   // though it is fine to do so).
   if (twitch.authProvider !== undefined) {
+    // Fetch the model that stores our token information.
+    const model = db.getModel('tokens');
+
     // Shut down our access to Twitch; this will remove all cached information and
     // stop us from receiving messages or talking to the API.
     shutdownTwitchAccess();
@@ -221,7 +235,10 @@ async function handleDeauthRoute(model, req, res) {
  * a special code value that we can exchange for a token as well as the state
  * parameter that we gave Twitch when we started the authorization attempt, so
  * that we can verify that it's valid. */
-async function handleTwitchRedirectRoute(model, req, res) {
+async function handleTwitchRedirectRoute(db, req, res) {
+  // Fetch the model that stores our token information.
+  const model = db.getModel('tokens');
+
   // The query parameters that come back include a code value that we need to
   // use to obtain our actual access token and the state value that we
   // originally provided to Twitch when the authorization started.

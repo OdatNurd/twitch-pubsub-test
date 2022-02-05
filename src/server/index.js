@@ -46,14 +46,6 @@ async function launch() {
   // after they cancel or not at all, if the user just closes the page.
   app.get('/auth', (req, res) => handleAuthRoute(req, res));
 
-  // This route kicks off our de-authorization process, which will check to see
-  // if we currently have an access token and, if we do, remove it before
-  // redirecting back to the root page.
-  app.get('/deauth', async (req, res) => {
-      const model = db.getModel('tokens');
-      handleDeauthRoute(model, req, res);
-  });
-
   // This route is where Twitch will call us back after the user either
   // authorizes the application or declines to authorize.
   //
@@ -62,8 +54,14 @@ async function launch() {
   // the state parameter that we gave Twitch when we started the authorization
   // attempt, so that we can verify that it's valid.
   app.get('/auth/twitch', async (req, res) => {
-    const model = db.getModel('tokens');
-    handleTwitchRedirectRoute(model, req, res);
+    handleTwitchRedirectRoute(db, req, res);
+  });
+
+  // This route kicks off our de-authorization process, which will check to see
+  // if we currently have an access token and, if we do, remove it before
+  // redirecting back to the root page.
+  app.get('/deauth', async (req, res) => {
+      handleDeauthRoute(db, req, res);
   });
 
   // Handle requests from clients that want to know what port we serve our
@@ -104,10 +102,18 @@ async function launch() {
   const model = db.getModel('tokens');
   const token = await model.findOne({ id: 1 });
   if (token !== undefined) {
-    token.accessToken = decrypt(token.accessToken);
-    token.refreshToken = decrypt(token.refreshToken);
-    await setupTwitchAccess(model, token);
-    setupTwitchChat(twitch);
+    try {
+      token.accessToken = decrypt(token.accessToken);
+      token.refreshToken = decrypt(token.refreshToken);
+      await setupTwitchAccess(model, token);
+      setupTwitchChat(twitch);
+    }
+    catch (e) {
+      console.log(`Error loading previous token: ${e}`);
+
+      // Get rid of the token we loaded; it is not actually valid.
+      await model.remove({ id: 1 });
+    }
   }
 }
 
