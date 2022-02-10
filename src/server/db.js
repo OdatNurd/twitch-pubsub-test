@@ -23,6 +23,59 @@ const TokenSchema = {
   expiresIn: { type: Number, defaultsTo: 0, nullable: true },
 };
 
+/* The schema for tracking giveaways; each entry in the database represents a
+ * specific giveaway, tracking when that giveaway started and when it ended. */
+const GiveawaySchema = {
+  id: 'increments',
+
+  // The time at which the giveaway starts and when the giveaway ends; these are
+  // recorded in milliseconds since the epoch.
+  startTime: { type: Date, nullable: false },
+  duration: { type: Number, nullable: false},
+
+  // The total accrued elapsed time of this giveaway; this is updated whenerver
+  // the giveaway pauses and on an autosave interval, in case the task exits
+  // unexpectedly while a giveaway is in progress.
+  elapsedTime: { type: Number, defaultsTo: 0, nullable: false},
+
+  // Is the current giveaway paused? This is set to yes if the giveaway is
+  // paused while it's running, and it's also forced to be turned on if there's
+  // a giveaway in progress when the application starts.
+  paused: { type: Boolean, defaultsTo: false, nullable: false},
+}
+
+
+/* The schema for storing incoming data that is used in the overlay, which
+ * includes bits that were thrown and subscriptions that were gifted. Channel
+ * point redeems are not persisted because they're not interesting for the
+ * overlay.
+ *
+ * This will only store bits that aren't anonymous and subscriptions that are
+ * gifted; regular subscriptions or anonymous bits aren't eligible for prizes
+ * in the giveaway.
+ *
+ * In all cases the tally for bits and subs from a specific user are incremented
+ * as data arrives; for a string of gift subs this requires multiple operations
+ * because Twitch delivers sub notifications one at a time. */
+const GifterSchema = {
+  id: 'increments',
+
+  // The giveaway that this particular gifter is a member of; the same user can
+  // be in several different giveaways, though only one giveaway can be running
+  // at any given time.
+  giveawayId: { type: Number, unique: true, nullable: false },
+
+  // The identifier for the user that this record represents; the display and
+  // user name can be looked up via this value; it never changes, unlike the
+  // others.
+  userId: { type: String, unique: true, nullable: false },
+
+  // The number of bits and gift subscriptions that this user has given during
+  // the current giveaway.
+  bits: { type: Number, defaultsTo: 0, nullable: false },
+  subs: { type: Number, defaultsTo: 0, nullable: false },
+};
+
 
 // =============================================================================
 
@@ -42,6 +95,8 @@ async function initializeDatabase() {
   // how to perform queries.
   await Promise.all([
     db.model('tokens', TokenSchema),
+    db.model('giveaways', GiveawaySchema),
+    db.model('gifters', GifterSchema),
   ]);
 
   return db;
