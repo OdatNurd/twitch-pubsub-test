@@ -12,6 +12,18 @@
 
 <a id="auth-link" href="#" target="_top"><button id="authorize-btn">Authorize with Bot Account</button></a>
 
+<div id="start-giveaway-container">
+  <h3>Current Giveaway</h3>
+  <input id="giveaway-duration" type="text" placeholder="Giveaway Duration HH:MM" value="6:50 remaining in current giveaway / giveaway is paused" disabled>
+  <button id="giveaway-start-btn">Start/Pause Giveaway</button>
+</div>
+
+<div id="cancel-giveaway-container">
+  <h3>Cancel Giveaway</h3>
+  <p class="warning">WARNING: This is not undoable!</p>
+  <button id="giveaway-cancel-btn">Cancel Giveaway</button>
+</div>
+
 <script type="module">
   // Bring in our websocket library and the configuration function
   const getConfig = require('../common/js/config');
@@ -20,7 +32,7 @@
   // Alter the link and text for the authorize button so that if the user is
   // authorized it will display their name and offer to deauthorize, and
   // otherwise it will invite them to auth themselves.
-  function setupAuthButton(authorized, username) {
+  function setupAuthControls(authorized, username) {
     const authLink = document.getElementById('auth-link');
     const authBtn = document.getElementById('authorize-btn');
 
@@ -28,8 +40,48 @@
     authLink.href = authorized ? '/deauth' : '/auth';
   }
 
-  // By default, assume we're not authorized until we learn differently.
-  setupAuthButton(false);
+  // Alter the controls that allow the user to start, pause and stop a giveaway
+  // so that they can control things as appropriate. The controls are set up
+  // based on the passed in giveaway data; this can be an empty object to
+  // indicate that there is no current giveaway.
+  function setupGiveawayControls(data) {
+    const durationFld = document.getElementById('giveaway-duration');
+    const startBtn = document.getElementById('giveaway-start-btn');
+    const cancelBtn = document.getElementById('giveaway-cancel-btn');
+
+    // If there is no incoming data, then all of the controls should be reset
+    // to their empty, default state.
+    if (Object.keys(data).length === 0) {
+      // Allow the user to enter a duration
+      durationFld.value = '';
+      durationFld.disabled = false;
+
+      // Make sure the button allows us to start a giveaway after we enter some
+      // text into the duration field to say how long.
+      startBtn.innerText = 'Start Giveaway';
+      startBtn.disabled = false;
+
+      // Since there's no giveaway running, you can't cancel it.
+      cancelBtn.disabled = true;
+    } else {
+      // The duration field should either be a countdown of the time left, or it
+      // should tll us that the giveaway is paused.
+      durationFld.value = data.paused ? `Giveaway is paused (XX:XX remaining)` : `XX:XX:XX remaining`;
+      durationFld.disabled = true;
+
+      startBtn.innerText = data.paused ? 'Resume Giveaway Clock' : 'Pause Giveaway Countdown'
+      startBtn.disabled = false;
+
+      // Wether the giveaway is currently paused or not, the user should be
+      // able to cancel it.
+      cancelBtn.disabled = false;
+    }
+  }
+
+  // By default, assume we're not authorized and there is no giveaway until we
+  // learn differently.
+  setupAuthControls(false);
+  setupGiveawayControls({});
 
   // Perform our setup actions.
   async function setup() {
@@ -41,7 +93,7 @@
     // When the twitch authorization state changes, alter the link and text of the
     // button to suit.
     socket.on("twitch-auth", data => {
-      setupAuthButton(data.authorized, data.userName);
+      setupAuthControls(data.authorized, data.userName);
     });
 
     socket.on("twitch-bits", data => {
@@ -54,6 +106,11 @@
 
     socket.on("twitch-redeem", data => {
       console.log(data);
+    });
+
+    socket.on("giveaway-info", data => {
+      console.log(data);
+      setupGiveawayControls(data)
     });
   }
 

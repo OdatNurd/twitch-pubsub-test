@@ -4,12 +4,15 @@ body {
   color: white;
 }
 
+*, *::before, *::after  {
+  box-sizing: border-box;
+}
+
 h3 {
   border-bottom: 1px solid;
 }
 
 button, input, select {
-  box-sizing: border-box;
   padding: 0.5em;
   margin-bottom: 1em;
 }
@@ -19,5 +22,18 @@ button {
 }
 
 select, input[type='text'] {
+  width: 100%;
+}
+
+.warning {
+  color:  red;
+  font-size: 90%;
+}
+
+#cancel-giveaway-container {
+  position: fixed;
+  padding: 0 0.5em;
+  left: 0;
+  bottom: 0;
   width: 100%;
 }

@@ -11,6 +11,7 @@ const { initializeDatabase } = require('./db');
 const { setupWebSockets } = require('./socket');
 
 const { twitch, setupTwitchAuthorization, setupTwitchAccess } = require('./twitch');
+const { setupGiveawayHandler } = require('./giveaway');
 const { setupEventTesting } = require('./testing');
 const { setupTwitchChat } = require('./chat');
 
@@ -43,6 +44,7 @@ async function launch() {
   // that we use to generate fake events.
   setupTwitchAuthorization(db, app);
   setupEventTesting(app);
+  await setupGiveawayHandler(db);
 
   // Set up some middleware that will serve static files out of the public folder
   // so that we don't have to inline the pages in code.

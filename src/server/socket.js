@@ -6,6 +6,8 @@ const { config } = require('./config');
 const { Server } = require("ws");
 const WebSocketWrapper = require("ws-wrapper");
 
+const { getCurrentGiveaway } = require('./giveaway');
+
 
 // =============================================================================
 
@@ -46,6 +48,16 @@ function setupWebSockets(twitch) {
     socket.emit('twitch-auth', {
       authorized: twitch.authProvider !== undefined,
       userName: twitch.userInfo !== undefined ? twitch.userInfo.displayName : undefined
+    });
+
+    // Determine if there is currently a giveaway running and, if there is,
+    // transmit information about it.
+    let giveaway = getCurrentGiveaway();
+    socket.emit('giveaway-info', {
+      startTime: giveaway?.startTime,
+      endTime: giveaway?.endTime,
+      elapsedTime: giveaway?.elapsedTime,
+      paused: giveaway?.paused,
     });
 
     // Listen for this socket being disconnected and handle that situation by
