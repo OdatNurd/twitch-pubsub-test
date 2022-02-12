@@ -2,7 +2,6 @@
 
 
 const { SingleUserPubSubClient } = require('@twurple/pubsub');
-const { sendSocketMessage } = require('./socket');
 const { handleRedemption, handleSubscription, handleBits } = require('./handler');
 
 

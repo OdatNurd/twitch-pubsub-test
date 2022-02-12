@@ -168,7 +168,7 @@ async function shutdownTwitchAccess() {
  * The authentication is complete when Twitch redirects back to our application,
  * which can happen either after the user says they authorize, after they cancel
  * or not at all, if the user just closes the page. */
-function handleAuthRoute(req, res) {
+function authorize(req, res) {
   // If we're already authorized, then we don't want to try to authorize again.
   // So in that case, we can just leave.
   if (twitch.authProvider !== undefined) {
@@ -205,7 +205,7 @@ function handleAuthRoute(req, res) {
 /* This route kicks off our de-authorization process, which will check to see if
  * we currently have an access token and, if we do, remove it before redirecting
  * back to the root page. */
-async function handleDeauthRoute(db, req, res) {
+async function deauthorize(db, req, res) {
   // If we are actually authorized, then remove authorization before we redirect
   // back. In the case where we're not authorized, skip calling these (even
   // though it is fine to do so).
@@ -235,7 +235,7 @@ async function handleDeauthRoute(db, req, res) {
  * a special code value that we can exchange for a token as well as the state
  * parameter that we gave Twitch when we started the authorization attempt, so
  * that we can verify that it's valid. */
-async function handleTwitchRedirectRoute(db, req, res) {
+async function twitchCallback(db, req, res) {
   // Fetch the model that stores our token information.
   const model = db.getModel('tokens');
 
@@ -295,11 +295,42 @@ async function handleTwitchRedirectRoute(db, req, res) {
 // =============================================================================
 
 
+/* Set up the application routes on the web server that allow us to handle the
+ * Twitch Authorization and Deauthorization flow; this only needs to be done
+ * one time and needs to be given the database so that it can persist any
+ * token changes, and the application instances so that it can set up the routes
+ * that it requires. */
+function setupTwitchAuthorization(db, app) {
+  // This route kicks off our authorization with twitch. It will store some
+  // local information and then redirect to Twitch to allow Twitch to carry out
+  // the authentication process.
+  //
+  // The authentication is complete when Twitch redirects back to our
+  // application, which can happen either after the user says they authorize,
+  // after they cancel or not at all, if the user just closes the page.
+  app.get('/auth', (req, res) => authorize(req, res));
+
+  // This route is where Twitch will call us back after the user either
+  // authorizes the application or declines to authorize.
+  //
+  // Twitch will send us back information about the authorization, which
+  // includes a special code value that we can exchange for a token as well as
+  // the state parameter that we gave Twitch when we started the authorization
+  // attempt, so that we can verify that it's valid.
+  app.get('/auth/twitch', async (req, res) => twitchCallback(db, req, res));
+
+  // This route kicks off our de-authorization process, which will check to see
+  // if we currently have an access token and, if we do, remove it before
+  // redirecting back to the root page.
+  app.get('/deauth', async (req, res) => deauthorize(db, req, res));
+}
+
+// =============================================================================
+
+
 module.exports = {
+  setupTwitchAuthorization,
   setupTwitchAccess,
   shutdownTwitchAccess,
-  handleAuthRoute,
-  handleDeauthRoute,
-  handleTwitchRedirectRoute,
   twitch,
 }
