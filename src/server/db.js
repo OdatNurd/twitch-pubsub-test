@@ -28,9 +28,18 @@ const TokenSchema = {
 const GiveawaySchema = {
   id: 'increments',
 
-  // The time at which the giveaway starts and when the giveaway ends; these are
-  // recorded in milliseconds since the epoch.
+  // The time at which the giveaway starts and when it eventually ended. Both of
+  // these are stored as dates, which in the databas end up being represented as
+  // ISO strings.
+  //
+  // The start time is populated right away when the giveaway starts, but the
+  // end time is not populated until the giveaway has ended.
   startTime: { type: Date, nullable: false },
+  endTime: { type: Date, nullable: true },
+
+  // How long this giveaway is expected to run, in milliseconds. The indication
+  // that the giveaway is running is that this is a larger number than the
+  // elapsed time.
   duration: { type: Number, nullable: false},
 
   // The total accrued elapsed time of this giveaway; this is updated whenerver

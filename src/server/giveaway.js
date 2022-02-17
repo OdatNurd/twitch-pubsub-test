@@ -1,12 +1,6 @@
 // =============================================================================
 
 
-const { sendSocketMessage } = require('./socket');
-
-
-// =============================================================================
-
-
 /* The database record that represents the currently running giveaway, if any.
  *
  * At any given time there can be at most one giveaway running in the channel,
