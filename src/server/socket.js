@@ -6,8 +6,6 @@ const { config } = require('./config');
 const { Server } = require("ws");
 const WebSocketWrapper = require("ws-wrapper");
 
-const { getCurrentGiveaway } = require('./giveaway');
-
 
 // =============================================================================
 
@@ -27,11 +25,10 @@ let webClients = new Set();
  * to communicate with the server and get updates. We do this rather than a long
  * poll so that everything is more interactive and speedy.
  *
- * This needs to be given the authorization provider that's being used for the
- * Twitch system in order to be able to know if the server is currently
- * authorized or not; the user information for the provided user should also be
- * given so that it can be transmitted out to connecting clients. */
-function setupWebSockets(twitch) {
+ * When new sockets are connected, an event is raised on the provided event
+ * bridge to let interested parties know; they can use this information to
+ * disseminate important information to new connections, for example. */
+ function setupWebSockets(bridge) {
   const server = new Server({ port: socketPort });
   console.log(`Listening for socket requests on http://localhost:${socketPort}`);
 
@@ -43,22 +40,9 @@ function setupWebSockets(twitch) {
     const socket = new WebSocketWrapper(webSocket);
     webClients.add(socket);
 
-    // Send a message to this socket to tell it the Twitch authorization state.
-    // Further updates will automatically occur as they happen.
-    socket.emit('twitch-auth', {
-      authorized: twitch.authProvider !== undefined,
-      userName: twitch.userInfo !== undefined ? twitch.userInfo.displayName : undefined
-    });
-
-    // Determine if there is currently a giveaway running and, if there is,
-    // transmit information about it.
-    let giveaway = getCurrentGiveaway();
-    socket.emit('giveaway-info', {
-      startTime: giveaway?.startTime,
-      endTime: giveaway?.endTime,
-      elapsedTime: giveaway?.elapsedTime,
-      paused: giveaway?.paused,
-    });
+    // Let interested parties know that there's a new socket connected, in case
+    // they need to take some action.
+    bridge.emit('socket-connect', socket);
 
     // Listen for this socket being disconnected and handle that situation by
     // removing it from the list of currently known clients.

@@ -300,7 +300,18 @@ async function twitchCallback(db, req, res) {
  * one time and needs to be given the database so that it can persist any
  * token changes, and the application instances so that it can set up the routes
  * that it requires. */
-function setupTwitchAuthorization(db, app) {
+function setupTwitchAuthorization(db, app, bridge) {
+  // Let interested parties know that there's a new socket connected, in case
+  // they need to take some action.
+  bridge.on('socket-connect', socket => {
+    // Send a message to this socket to tell it the Twitch authorization state.
+    // Further updates will automatically occur as they happen.
+    socket.emit('twitch-auth', {
+      authorized: twitch.authProvider !== undefined,
+      userName: twitch.userInfo !== undefined ? twitch.userInfo.displayName : undefined
+    });
+  });
+
   // This route kicks off our authorization with twitch. It will store some
   // local information and then redirect to Twitch to allow Twitch to carry out
   // the authentication process.

@@ -14,11 +14,23 @@ let currentGiveaway = undefined;
 /* This sets up the giveaway handling for the overlay, which encompasses both
  * figuring out at startup if there is a current giveaway as well as sending out
  * messages regarding giveaway events as they occur. */
-async function setupGiveawayHandler(db) {
+async function setupGiveawayHandler(db, bridge) {
   console.log('==================================');
   console.log(new Date());
   console.log(await db.getModel('giveaways').find({}));
   console.log('==================================');
+
+  // Every time a new socket connects to the server, send it a message to tell
+  // it the state of the current giveaway, if any.
+  bridge.on('socket-connect', socket => {
+    socket.emit('giveaway-info', {
+      startTime: currentGiveaway?.startTime,
+      endTime: currentGiveaway?.endTime,
+      duration: currentGiveaway?.duration,
+      elapsedTime: currentGiveaway?.elapsedTime,
+      paused: currentGiveaway?.paused,
+    });
+  })
 
   // Order the giveaway entries by their start time and pluck the most recent
   // one from the list; if there is currently a giveaway running, it would be
@@ -43,20 +55,6 @@ async function setupGiveawayHandler(db) {
 // =============================================================================
 
 
-/* Obtain the informationr regarding the currently running giveaway, if any.
- *
- * If there a giveaway running, this will return the database record that is
- * used to encompass it's data. When there's not giveaway running, this will
- * return undefined. */
-function getCurrentGiveaway() {
-  return currentGiveaway;
-}
-
-
-// =============================================================================
-
-
 module.exports = {
   setupGiveawayHandler,
-  getCurrentGiveaway,
 }

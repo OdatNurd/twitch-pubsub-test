@@ -15,6 +15,8 @@ const { setupGiveawayHandler } = require('./giveaway');
 const { setupEventTesting } = require('./testing');
 const { setupTwitchChat } = require('./chat');
 
+const { EventEmitter } = require("events");
+
 
 // =============================================================================
 
@@ -23,6 +25,10 @@ const { setupTwitchChat } = require('./chat');
  * to set up the database. */
 async function launch() {
   // console.log(config.toString());
+
+  // Create a shared event emitter that allows us to "bridge" communications
+  // between the various modules.
+  let bridge = new EventEmitter();
 
   // The handle to the database that we use to persist information between runs,
   // such as our tokens and the current leaderboards (for example).
@@ -42,9 +48,9 @@ async function launch() {
 
   // Set up the routes for our Twitch authorization and for the testing services
   // that we use to generate fake events.
-  setupTwitchAuthorization(db, app);
+  setupTwitchAuthorization(db, app, bridge);
   setupEventTesting(app);
-  await setupGiveawayHandler(db);
+  await setupGiveawayHandler(db, bridge);
 
   // Set up some middleware that will serve static files out of the public folder
   // so that we don't have to inline the pages in code.
@@ -57,7 +63,7 @@ async function launch() {
   });
 
   // Start up the WebSocket listener
-  setupWebSockets(twitch);
+  setupWebSockets(bridge);
 
   // Try to fetch out a previous authorization token. If we find one, then we
   // can decrypt and refresh the token and set up our environment.
