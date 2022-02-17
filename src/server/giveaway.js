@@ -1,5 +1,6 @@
 // =============================================================================
 
+const { sendSocketMessage } = require('./socket');
 
 /* The database record that represents the currently running giveaway, if any.
  *
@@ -11,14 +12,82 @@ let currentGiveaway = undefined;
 // =============================================================================
 
 
+function startGiveaway(req, res) {
+  console.log('starting giveaway');
+  currentGiveaway = {
+    startTime: new Date(),
+    endTime: null,
+    elapsedTime: 7200000,
+    paused: false,
+  }
+
+  sendSocketMessage('giveaway-info', currentGiveaway);
+  res.json({success: true});
+}
+
+
+// =============================================================================
+
+
+function pauseGiveaway(req, res) {
+  console.log('pausing giveaway');
+  currentGiveaway = {
+    startTime: new Date(),
+    endTime: null,
+    elapsedTime: 7200000,
+    paused: true,
+  }
+
+  sendSocketMessage('giveaway-info', currentGiveaway);
+  res.json({success: true});
+}
+
+
+// =============================================================================
+
+
+function unpauseGiveaway(req, res) {
+  console.log('resuming giveaway');
+  currentGiveaway = {
+    startTime: new Date(),
+    endTime: null,
+    elapsedTime: 7200000,
+    paused: false,
+  }
+
+  sendSocketMessage('giveaway-info', currentGiveaway);
+  res.json({success: true});
+}
+
+
+// =============================================================================
+
+
+function cancelGiveaway(req, res) {
+  console.log('cancelling giveaway');
+  currentGiveaway = undefined
+
+  sendSocketMessage('giveaway-info', {});
+  res.json({success: true});
+}
+
+
+// =============================================================================
+
+
 /* This sets up the giveaway handling for the overlay, which encompasses both
  * figuring out at startup if there is a current giveaway as well as sending out
  * messages regarding giveaway events as they occur. */
-async function setupGiveawayHandler(db, bridge) {
-  console.log('==================================');
-  console.log(new Date());
-  console.log(await db.getModel('giveaways').find({}));
-  console.log('==================================');
+async function setupGiveawayHandler(db, app, bridge) {
+  // console.log('==================================');
+  // console.log(new Date());
+  // console.log(await db.getModel('giveaways').find({}));
+  // console.log('==================================');
+
+  app.get('/giveaway/start', (req, res) => startGiveaway(req, res));
+  app.get('/giveaway/pause', (req, res) => pauseGiveaway(req, res));
+  app.get('/giveaway/unpause', (req, res) => unpauseGiveaway(req, res));
+  app.get('/giveaway/cancel', (req, res) => cancelGiveaway(req, res));
 
   // Every time a new socket connects to the server, send it a message to tell
   // it the state of the current giveaway, if any.

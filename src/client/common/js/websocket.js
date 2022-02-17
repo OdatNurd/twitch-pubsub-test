@@ -38,6 +38,7 @@ function getWebSocket(hostname, port) {
     console.log(`error: ${event.target.url}`);
     socket.disconnect();
   });
+
   return socket;
 }
 

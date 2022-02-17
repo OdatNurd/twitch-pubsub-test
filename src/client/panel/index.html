@@ -25,14 +25,43 @@
 </div>
 
 <script type="module">
+  // Gather the handles on the panel controls, since we're going to need them
+  // throughout the code.
+  const durationFld = document.getElementById('giveaway-duration');
+  const startBtn = document.getElementById('giveaway-start-btn');
+  const cancelBtn = document.getElementById('giveaway-cancel-btn');
+
   // Bring in our websocket library and the configuration function
   const getConfig = require('../common/js/config');
   const getWebSocket = require('../common/js/websocket');
 
+  // The information on the currently running giveaway (if any); when this is
+  // undefined, there's not currently a giveaway in progress.
+  let currentGiveaway = undefined;
+
+  // The start button either starts a new giveaway or pauses the existing
+  // one, depending on the current state.
+  startBtn.addEventListener('click', () => {
+    const pause_map = { true: 'unpause', false: 'pause' };
+
+    if (currentGiveaway === undefined) {
+      window.fetch('/giveaway/start', { method: 'get' });
+    } else {
+      window.fetch(`/giveaway/${pause_map[currentGiveaway.paused]}`);
+    }
+  });
+
+  // The cancel button will cancel; that's why it's called that.
+  cancelBtn.addEventListener('click', () => {
+    if (currentGiveaway !== undefined) {
+      window.fetch('/giveaway/cancel');
+    }
+  });
+
   // Alter the link and text for the authorize button so that if the user is
   // authorized it will display their name and offer to deauthorize, and
   // otherwise it will invite them to auth themselves.
-  function setupAuthControls(authorized, username) {
+  function updateAuthControls(authorized, username) {
     const authLink = document.getElementById('auth-link');
     const authBtn = document.getElementById('authorize-btn');
 
@@ -44,73 +73,77 @@
   // so that they can control things as appropriate. The controls are set up
   // based on the passed in giveaway data; this can be an empty object to
   // indicate that there is no current giveaway.
-  function setupGiveawayControls(data) {
-    const durationFld = document.getElementById('giveaway-duration');
-    const startBtn = document.getElementById('giveaway-start-btn');
-    const cancelBtn = document.getElementById('giveaway-cancel-btn');
+  function updateGiveawayControls() {
+    console.log(currentGiveaway);
 
-    // If there is no incoming data, then all of the controls should be reset
-    // to their empty, default state.
-    if (Object.keys(data).length === 0) {
-      // Allow the user to enter a duration
+    // If there is no current giveaway, then all of the controls should be reset
+    // to the state that allows the user to start a new giveaway.
+    if (currentGiveaway === undefined) {
+      // Allow the user to enter a duration for the giveaway into the field,
+      // which should be empty of any previous text.
       durationFld.value = '';
       durationFld.disabled = false;
 
-      // Make sure the button allows us to start a giveaway after we enter some
-      // text into the duration field to say how long.
+      // The button should allow us to start a giveaway, but it also requires
+      // that the user tpe a valid duration into the input field first, so the
+      // button needs to be initially disabled.
       startBtn.innerText = 'Start Giveaway';
       startBtn.disabled = false;
 
-      // Since there's no giveaway running, you can't cancel it.
+      // Since there's no giveaway running, the button for cancelling it should
+      // be disabled.
       cancelBtn.disabled = true;
     } else {
-      // The duration field should either be a countdown of the time left, or it
-      // should tll us that the giveaway is paused.
-      durationFld.value = data.paused ? `Giveaway is paused (XX:XX remaining)` : `XX:XX:XX remaining`;
+      // When there's a giveaway running (even if it's paused), the duration
+      // field is used as an informational field to tell us the current state of
+      // things, so set its value as appropriate and disable it so that the user
+      // can't type into it.
+      durationFld.value = currentGiveaway.paused ? `Giveaway is paused (XX:XX remaining)` : `XX:XX:XX remaining`;
       durationFld.disabled = true;
 
-      startBtn.innerText = data.paused ? 'Resume Giveaway Clock' : 'Pause Giveaway Countdown'
+      // When a giveaway is running, the start button is allowed to pause it.
+      startBtn.innerText = currentGiveaway.paused ? 'Resume Giveaway Clock' : 'Pause Giveaway Countdown'
       startBtn.disabled = false;
 
-      // Wether the giveaway is currently paused or not, the user should be
-      // able to cancel it.
+      // Regardless of wether the currently active giveaway is running or is
+      // just paused, the user should be able to cancel it if they want to.
       cancelBtn.disabled = false;
     }
   }
 
-  // By default, assume we're not authorized and there is no giveaway until we
-  // learn differently.
-  setupAuthControls(false);
-  setupGiveawayControls({});
+  // By default, assume we're not authorized and there is no current giveaway
+  // until we learn differently.
+  updateAuthControls(false);
+  updateGiveawayControls();
 
-  // Perform our setup actions.
+  // Set up all of our handlers and kick the panel off; this will among other
+  // things make sure that we're connected to the back end and that we're
+  // listening for the appropriate events.
   async function setup() {
     // Get our configuration, and then use it to connect to the back end so
     // that we can communicate with it and get events.
     const config = await getConfig();
     const socket = getWebSocket(location.hostname, config.socketPort);
 
-    // When the twitch authorization state changes, alter the link and text of the
-    // button to suit.
-    socket.on("twitch-auth", data => {
-      setupAuthControls(data.authorized, data.userName);
-    });
+    // Update the Twitch authorization controls in the panel based on the
+    // currently available Twitch authorization state, as transmitted from the
+    // back end.
+    socket.on("twitch-auth", data => updateAuthControls(data.authorized, data.userName));
 
-    socket.on("twitch-bits", data => {
-      console.log(data);
-    });
+    // Handle an incoming notification of bits and subs being broadcast from the
+    // back end.
+    socket.on("twitch-bits", data => console.log(data));
+    socket.on("twitch-sub", data => console.log(data));
 
-    socket.on("twitch-sub", data => {
-      console.log(data);
-    });
-
-    socket.on("twitch-redeem", data => {
-      console.log(data);
-    });
-
+    // Receive updates on the current state of the giveaway that's currently in
+    // progress, if any. This gets disopatched when the socket first connects
+    // too.
     socket.on("giveaway-info", data => {
-      console.log(data);
-      setupGiveawayControls(data)
+      // Set up the current giveaway, which is either a fully populated object
+      // or, if the other end is telling us that there's no giveaway information
+      // assume that the value is just undefined.
+      currentGiveaway = Object.keys(data).length === 0 ? undefined : data;
+      updateGiveawayControls()
     });
   }
 

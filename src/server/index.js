@@ -50,7 +50,7 @@ async function launch() {
   // that we use to generate fake events.
   setupTwitchAuthorization(db, app, bridge);
   setupEventTesting(app);
-  await setupGiveawayHandler(db, bridge);
+  await setupGiveawayHandler(db, app, bridge);
 
   // Set up some middleware that will serve static files out of the public folder
   // so that we don't have to inline the pages in code.
