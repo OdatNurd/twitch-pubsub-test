@@ -36,7 +36,7 @@ async function setupGiveawayHandler(db) {
 
   // In order to know if this giveaway is still valid we need to know if there
   // is any of the duration left or not.
-  if (entry.elapsedTime < entry.duration) {
+  if (entry !== undefined && entry.elapsedTime < entry.duration) {
     console.log('A giveaway is in progress; pausing it');
     currentGiveaway = entry;
     currentGiveaway.paused = true;
