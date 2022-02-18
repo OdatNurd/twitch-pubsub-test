@@ -28,6 +28,11 @@ const TokenSchema = {
 const GiveawaySchema = {
   id: 'increments',
 
+  // The identifier for the user that owns this giveaway; when the logged in
+  // user changes, the list of potential giveaways that are running also changes
+  // as a result.
+  userId: { type: String, unique: true, nullable: false },
+
   // The time at which the giveaway starts and when it eventually ended. Both of
   // these are stored as dates, which in the databas end up being represented as
   // ISO strings.
