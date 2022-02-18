@@ -10,10 +10,11 @@ const { decrypt } = require('./crypto');
 const { initializeDatabase } = require('./db');
 const { setupWebSockets } = require('./socket');
 
-const { twitch, setupTwitchAuthorization, setupTwitchAccess } = require('./twitch');
-const { setupGiveawayHandler } = require('./giveaway');
+const { setupTwitchAuthorization, setupTwitchAccess } = require('./twitch');
+const { setupTwitchPubSub } = require('./pubsub');
 const { setupEventTesting } = require('./testing');
 const { setupTwitchChat } = require('./chat');
+const { setupGiveawayHandler } = require('./giveaway');
 
 const { EventEmitter } = require("events");
 
@@ -46,8 +47,14 @@ async function launch() {
     res.json({socketPort: config.get('server.socketPort')});
   });
 
-  // Set up the routes for our Twitch authorization and for the testing services
-  // that we use to generate fake events.
+  // Set up the our chat system, the routes for our Twitch authorization and for
+  // the testing services that we use to generate fake events.
+  //
+  // Ordering is important here; some systems rely on the events that the Twitch
+  // portion generates and so they need to be initialized first so they can
+  // catch any possible initial events.
+  setupTwitchChat(bridge);
+  setupTwitchPubSub(bridge);
   setupTwitchAuthorization(db, app, bridge);
   setupEventTesting(app);
   await setupGiveawayHandler(db, app, bridge);
@@ -73,8 +80,11 @@ async function launch() {
     try {
       token.accessToken = decrypt(token.accessToken);
       token.refreshToken = decrypt(token.refreshToken);
-      await setupTwitchAccess(model, token);
-      setupTwitchChat(twitch);
+
+      // Directly invoke the routine in the Twitch code that would normally
+      // be invoked by the Twitch auth flow; vaguely messy but it gets the job
+      // done.
+      await setupTwitchAccess(model, token, bridge);
     }
     catch (e) {
       console.log(`Error loading previous token: ${e}`);

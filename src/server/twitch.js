@@ -9,8 +9,6 @@ const { ApiClient } = require('@twurple/api');
 const { v4: uuidv4 } = require('uuid');
 
 const { sendSocketMessage } = require('./socket');
-const { setupTwitchChat, leaveTwitchChat } = require('./chat');
-const { setupTwitchPubSub, shutdownTwitchPubSub } = require('./pubsub');
 const { encrypt } = require('./crypto');
 
 
@@ -72,7 +70,7 @@ let twitch = {
 
 /* Given an object that contains token data, set up the appropriate Twitch
  * integrations. */
-async function setupTwitchAccess(model, token) {
+async function setupTwitchAccess(model, token, bridge) {
   // If we've already set up Twitch access, be a giant coward and refuse to do
   // it again. The user needs to deauth first.
   if (twitch.authProvider !== undefined) {
@@ -116,10 +114,8 @@ async function setupTwitchAccess(model, token) {
     throw e;
   }
 
-  // Set up our PubSub client and listen for the events that will allow us to
-  // track the leader board. Since we may need to remove these, we need to
-  // store the listeners as we add them.
-  setupTwitchPubSub(twitch);
+  // Tell interested parties that we're now authorized.
+  bridge.emit('twitch-authorize', twitch);
 
   // Transmit to all listeners the fact that we're currently authorized, and who
   // the authorized user is.
@@ -135,21 +131,20 @@ async function setupTwitchAccess(model, token) {
 /* This removes all current Twitch integrations that have been set up (if any),
  * in preparation for the user logging out of Twitch or changing their
  * current authorization. */
-async function shutdownTwitchAccess() {
+async function shutdownTwitchAccess(bridge) {
   // If we have not already set up Twitch access, there's nothing to shut down
   if (twitch.authProvider === undefined) {
     return;
   }
-
-  // If we previously set up listeners in this run, we need to remove them
-  // before we shut down.
-  shutdownTwitchPubSub();
 
   // Clobber away our authorization provider and twitch API handle, as well as
   // the cached information on the current user.
   twitch.authProvider = undefined;
   twitch.api = undefined;
   twitch.userInfo = undefined;
+
+  // Tell interested parties that we're no longer authorized.
+  bridge.emit('twitch-deauthorize', twitch);
 
   // Let all connected listeners know that we are no longer authorized.
   sendSocketMessage('twitch-auth', { authorized: false });
@@ -205,20 +200,19 @@ function authorize(req, res) {
 /* This route kicks off our de-authorization process, which will check to see if
  * we currently have an access token and, if we do, remove it before redirecting
  * back to the root page. */
-async function deauthorize(db, req, res) {
+async function deauthorize(db, bridge, req, res) {
   // If we are actually authorized, then remove authorization before we redirect
   // back. In the case where we're not authorized, skip calling these (even
   // though it is fine to do so).
   if (twitch.authProvider !== undefined) {
-    // Fetch the model that stores our token information.
+    // Fetch the model that stores our token information, then remove the stored
+    // token.
     const model = db.getModel('tokens');
+    await model.remove({ id: 1 });
 
     // Shut down our access to Twitch; this will remove all cached information and
     // stop us from receiving messages or talking to the API.
-    shutdownTwitchAccess();
-    leaveTwitchChat();
-
-    await model.remove({ id: 1 });
+    shutdownTwitchAccess(bridge);
   }
 
   res.redirect('/panel/');
@@ -235,7 +229,7 @@ async function deauthorize(db, req, res) {
  * a special code value that we can exchange for a token as well as the state
  * parameter that we gave Twitch when we started the authorization attempt, so
  * that we can verify that it's valid. */
-async function twitchCallback(db, req, res) {
+async function twitchCallback(db, bridge, req, res) {
   // Fetch the model that stores our token information.
   const model = db.getModel('tokens');
 
@@ -281,11 +275,8 @@ async function twitchCallback(db, req, res) {
       expiresIn: token.expiresIn,
     });
 
-    // Set up our access to Twitch and to Chat; we're specifically not bothering
-    // to wait for the Twitch chat to connect; that promise can resolve on its
-    // own.
-    await setupTwitchAccess(model, token);
-    setupTwitchChat(twitch);
+    // Set up our access to Twitch, including our authorization
+    await setupTwitchAccess(model, token, bridge);
   }
 
   return res.redirect('/panel/');
@@ -328,12 +319,12 @@ function setupTwitchAuthorization(db, app, bridge) {
   // includes a special code value that we can exchange for a token as well as
   // the state parameter that we gave Twitch when we started the authorization
   // attempt, so that we can verify that it's valid.
-  app.get('/auth/twitch', async (req, res) => twitchCallback(db, req, res));
+  app.get('/auth/twitch', async (req, res) => twitchCallback(db, bridge, req, res));
 
   // This route kicks off our de-authorization process, which will check to see
   // if we currently have an access token and, if we do, remove it before
   // redirecting back to the root page.
-  app.get('/deauth', async (req, res) => deauthorize(db, req, res));
+  app.get('/deauth', async (req, res) => deauthorize(db, bridge, req, res));
 }
 
 // =============================================================================
@@ -342,6 +333,4 @@ function setupTwitchAuthorization(db, app, bridge) {
 module.exports = {
   setupTwitchAuthorization,
   setupTwitchAccess,
-  shutdownTwitchAccess,
-  twitch,
 }

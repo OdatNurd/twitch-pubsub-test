@@ -22,7 +22,7 @@ let pubSubListeners = [];
  * actively authorized user is available to the overlay, and uses the
  * authorization gained from that user to subscribe to the events that we're
  * interested in handling. */
-async function setupTwitchPubSub(twitch) {
+async function startTwitchPubSub(twitch) {
   if (pubSubClient !== undefined) {
     return;
   }
@@ -44,7 +44,7 @@ async function setupTwitchPubSub(twitch) {
 
 /* Shut down an active Twitch PubSub connection (if there is one), removing
  * any existing listeners and shutting them down. */
-function shutdownTwitchPubSub() {
+function stopTwitchPubSub(twitch) {
   // If we previously set up listeners in this run, we need to remove them
   // before we shut down.
   if (pubSubClient !== undefined) {
@@ -58,7 +58,19 @@ function shutdownTwitchPubSub() {
 // =============================================================================
 
 
+/* This sets up our Twitch PubSub functionality by listening for events that are
+ * broadcast from the Twitch subsystem over the provided event bridge, reacting
+ * to a user being authorized or unauthorized by either starting or stopping
+ * the PubSub event system, as appropriate. */
+function setupTwitchPubSub(bridge) {
+  bridge.on('twitch-authorize', twitch => startTwitchPubSub(twitch));
+  bridge.on('twitch-deauthorize', twitch => stopTwitchPubSub(twitch));
+}
+
+
+// =============================================================================
+
+
 module.exports = {
   setupTwitchPubSub,
-  shutdownTwitchPubSub,
 }

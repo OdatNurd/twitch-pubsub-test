@@ -28,7 +28,7 @@ let chat = {
 /* This will do the work necessary to connect the back end system to the Twitch
  * channel of the currently authorized user. We set up a couple of simple event
  * listeners here to allow us to monitor the system. */
-async function setupTwitchChat(twitch) {
+async function enterTwitchChat(twitch) {
   // If we've already set up Twitch chat or haven't set up Twitch access, we
   // can't proceed.
   if (chat.client !== undefined || twitch.authProvider === undefined) {
@@ -87,8 +87,6 @@ async function setupTwitchChat(twitch) {
   // We're done, so indicate that we're connecting to twitch.
   console.log(`Connecting to Twitch chat and joining channel ${chat.channel}`);
   await chat.client.connect();
-
-  return chat;
 }
 
 
@@ -158,9 +156,21 @@ async function chatDo(action) {
 // =============================================================================
 
 
+/* This sets up our Twitch chat functionality by listening for events that are
+ * broadcast from the Twitch subsystem over the provided event bridge, reacting
+ * to a user being authorized or unauthorized by either entering or leaving
+ * the chat, as appropriate. */
+function setupTwitchChat(bridge) {
+  bridge.on('twitch-authorize', twitch => enterTwitchChat(twitch));
+  bridge.on('twitch-deauthorize', twitch => leaveTwitchChat(twitch));
+}
+
+
+// =============================================================================
+
+
 module.exports = {
   setupTwitchChat,
-  leaveTwitchChat,
   chatSay,
   chatDo,
 }
