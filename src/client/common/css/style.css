@@ -30,6 +30,10 @@ select, input[type='text'] {
   font-size: 90%;
 }
 
+.hidden {
+  display: none;
+}
+
 #cancel-giveaway-container {
   position: fixed;
   padding: 0 0.5em;

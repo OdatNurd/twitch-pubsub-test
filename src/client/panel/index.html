@@ -20,8 +20,9 @@
 
 <div id="cancel-giveaway-container">
   <h3>Cancel Giveaway</h3>
-  <p class="warning">WARNING: This is not undoable!</p>
+  <p id="warning" class="warning hidden">WARNING: This is not undoable!</p>
   <button id="giveaway-cancel-btn" disabled>Cancel Giveaway</button>
+  <button id="giveaway-confirm-btn" class="hidden">Are You Sure?!</button>
 </div>
 
 <script type="module">
@@ -33,6 +34,8 @@
   const durationFld = document.getElementById('giveaway-duration');
   const startBtn = document.getElementById('giveaway-start-btn');
   const cancelBtn = document.getElementById('giveaway-cancel-btn');
+  const warningTxt = document.getElementById('warning');
+  const confirmBtn = document.getElementById('giveaway-confirm-btn');
 
   // Bring in our websocket library and the configuration function
   const getConfig = require('../common/js/config');
@@ -44,6 +47,12 @@
   // The information on the currently running giveaway (if any); when this is
   // undefined, there's not currently a giveaway in progress.
   let currentGiveaway = undefined;
+
+  let toggleID = undefined;
+  const confirmToggle = () => {
+    [warningTxt, cancelBtn, confirmBtn].forEach(el => el.classList.toggle('hidden'));
+    toggleID = undefined;
+  }
 
   // The start button either starts a new giveaway or pauses the existing
   // one, depending on the current state.
@@ -57,8 +66,19 @@
     }
   });
 
-  // The cancel button will cancel; that's why it's called that.
   cancelBtn.addEventListener('click', () => {
+    // Flip the state of our confirm buttons; put it back after a few seconds
+    confirmToggle();
+    toggleID = window.setTimeout(() => confirmToggle(), 5000);
+  });
+
+  // The confirm button will confirm; that's why it's called that.
+  confirmBtn.addEventListener('click', () => {
+    // Flip the button state back; we also need to cancel the confirmation
+    // timer.
+    window.clearTimeout(toggleID);
+    confirmToggle();
+
     if (currentGiveaway !== undefined) {
       window.fetch('/giveaway/cancel');
     }
