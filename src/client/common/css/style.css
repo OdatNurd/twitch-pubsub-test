@@ -26,8 +26,9 @@ select, input[type='text'] {
 }
 
 .warning {
-  color:  red;
+  color:  #ff8ca7;
   font-size: 90%;
+  text-align: center;
 }
 
 .hidden {
@@ -40,4 +41,10 @@ select, input[type='text'] {
   left: 0;
   bottom: 0;
   width: 100%;
+}
+
+#giveaway-confirm-btn {
+  border: 2px solid #a82846;
+  background: #85243a;
+  color: white;
 }
