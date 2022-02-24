@@ -68,6 +68,27 @@ let twitch = {
 // =============================================================================
 
 
+/* Send out a Twitch authorization message using the currently authorized user
+ * information (if any); the message goes either to the specific socket given
+ * if there is one, or to all connected sockets if not. */
+function sendTwitchAuthUpdate(socket) {
+  const msg = {
+      authorized: twitch.authProvider !== undefined,
+      userName: twitch.userInfo !== undefined ? twitch.userInfo.displayName : undefined,
+      userId: twitch.userInfo !== undefined ? twitch.userInfo.id : undefined
+    };
+
+  if (socket !== undefined) {
+    socket.emit('twitch-auth', msg);
+  } else {
+    sendSocketMessage('twitch-auth', msg);
+  }
+}
+
+
+// =============================================================================
+
+
 /* Given an object that contains token data, set up the appropriate Twitch
  * integrations. */
 async function setupTwitchAccess(model, token, bridge) {
@@ -119,7 +140,7 @@ async function setupTwitchAccess(model, token, bridge) {
 
   // Transmit to all listeners the fact that we're currently authorized, and who
   // the authorized user is.
-  sendSocketMessage('twitch-auth', { authorized: true, userName: twitch.userInfo.displayName});
+  sendTwitchAuthUpdate();
 
   console.log('Twitch integration setup complete');
 }
@@ -147,7 +168,7 @@ async function shutdownTwitchAccess(bridge) {
   bridge.emit('twitch-deauthorize', twitch);
 
   // Let all connected listeners know that we are no longer authorized.
-  sendSocketMessage('twitch-auth', { authorized: false });
+  sendTwitchAuthUpdate();
 
   console.log('Twitch integrations have been shut down');
 }
@@ -297,10 +318,7 @@ function setupTwitchAuthorization(db, app, bridge) {
   bridge.on('socket-connect', socket => {
     // Send a message to this socket to tell it the Twitch authorization state.
     // Further updates will automatically occur as they happen.
-    socket.emit('twitch-auth', {
-      authorized: twitch.authProvider !== undefined,
-      userName: twitch.userInfo !== undefined ? twitch.userInfo.displayName : undefined
-    });
+    sendTwitchAuthUpdate(socket);
   });
 
   // This route kicks off our authorization with twitch. It will store some
