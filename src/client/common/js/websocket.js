@@ -12,8 +12,12 @@ const WebSocketWrapper = require("ws-wrapper");
  *
  * The returned socket will attempt to keep itself connected by noticing when it
  * is disconnected or errors out and triggering a manual connection, until the
- * socket is eventualy connected again. */
-function getWebSocket(hostname, port) {
+ * socket is eventualy connected again.
+ *
+ * If provided, the callback will be invoked every time the connection state
+ * changes, and be passed a boolean that's true if the socket is connected and
+ * false if it's not. */
+function getWebSocket(hostname, port, callback) {
   // Construct the URL that we're going to be connecting to.
   const url = `ws://${hostname}:${port}`;
 
@@ -23,12 +27,21 @@ function getWebSocket(hostname, port) {
 
   // Purely for informational reasons, display connection information so that
   // we can verify that things are working as expected.
-  socket.on("open", event => console.log(`connect: ${event.target.url}`));
+  socket.on("open", event => {
+    console.log(`connect: ${event.target.url}`);
+    if (callback !== undefined) {
+      callback(true);
+    }
+  });
 
   // In the event that our socket disconnects, wait a few seconds and then try
   // to re-establish the connection again.
   socket.on('disconnect', (event, wasOpen) => {
     console.log(`disconnect: ${event.target.url}`);
+    if (callback !== undefined) {
+      callback(false);
+    }
+
     setTimeout(() => socket.bind(new WebSocket(url)), 5000);
   });
 
@@ -46,4 +59,26 @@ function getWebSocket(hostname, port) {
 // =============================================================================
 
 
-module.exports = getWebSocket;
+/* This is a factory function which will return a callback suitable for use
+ * with the getWebSocket function, and will adjust the div with the ID you pass
+ * in here so that the text content and class represents the connection state
+ * of some socket. */
+function trackConnectionState(divId) {
+  const connectionTxt = document.getElementById(divId);
+
+  return connected => {
+      // Flip the class states around based on the incoming status.
+      connectionTxt.classList.remove(connected ? 'disconnected' : 'connected')
+      connectionTxt.classList.add(connected ? 'connected' : 'disconnected')
+
+      connectionTxt.innerText = connected ? 'Connected' : 'Disconnected';
+    }
+}
+
+// =============================================================================
+
+
+module.exports = {
+  getWebSocket,
+  trackConnectionState
+}

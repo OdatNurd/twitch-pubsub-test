@@ -35,6 +35,21 @@ select, input[type='text'] {
   display: none;
 }
 
+.connected {
+  color: #8cffa7;
+}
+
+.disconnected {
+  color: #ff8ca7;
+}
+
+#connection-state {
+  /*border: 1px solid blue;*/
+  padding-bottom: 0.5em;
+  font-size: 90%;
+  text-align: center;
+}
+
 #cancel-giveaway-container {
   position: fixed;
   padding: 0 0.5em;
