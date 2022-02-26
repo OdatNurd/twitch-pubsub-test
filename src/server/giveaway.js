@@ -218,7 +218,7 @@ async function resumeCurrentGiveaway(db, userId, autoPause) {
   currentGiveaway = entry;
 
   if (autoPause === true) {
-    console.log('Giveaway: giveaway is in progress; auto-pausing it');
+    console.log(`Giveaway: Giveaway is in progress (${humanize(currentGiveaway.duration - currentGiveaway.elapsedTime)} remaining); auto-pausing it`);
     currentGiveaway.paused = true;
     await db.getModel('giveaways').update({ id: currentGiveaway.id }, currentGiveaway);
   }
