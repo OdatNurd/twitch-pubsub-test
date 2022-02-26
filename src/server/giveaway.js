@@ -137,15 +137,30 @@ async function startGiveaway(db, req, res) {
 // =============================================================================
 
 
-function pauseGiveaway(db, req, res) {
-  console.log('pausing giveaway');
-  currentGiveaway = {
-    startTime: new Date(),
-    endTime: null,
-    elapsedTime: 7200000,
-    paused: true,
+/* Pause an existing giveaway, if one is running and not already paused.
+ *
+ * This will stop the running timer, change the state on the current giveaway,
+ * update the database and then let the front end code know the new state. */
+async function pauseGiveaway(db, req, res) {
+  // Pull the ripcord if somehow this gets called when there's not already a
+  // giveaway in progress, or if there is but it's paused already.
+  if (currentGiveaway === undefined || currentGiveaway.paused === true) {
+    return;
   }
 
+  console.log(`Giveaway: Pausing giveaway (${humanize(currentGiveaway.duration - currentGiveaway.elapsedTime)} remaining)`);
+
+  // If there is currently a timer running, cancel it so that it stops ticking.
+  // Even if there's not, this function silently does nothing if the timer ID[
+  // you give it is not valid.
+  clearTimeout(giveawayTimerID);
+
+  // Set the paused flag on the current giveaway and then update the database
+  // to make sure that it knows what the current state is.
+  currentGiveaway.paused = true;
+  await db.getModel('giveaways').update( { id: currentGiveaway.id }, currentGiveaway);
+
+  // Let everyone know the new state of the giveaway.
   sendSocketMessage('giveaway-info', currentGiveaway);
   res.json({success: true});
 }
@@ -154,16 +169,32 @@ function pauseGiveaway(db, req, res) {
 // =============================================================================
 
 
-function unpauseGiveaway(db, req, res) {
-  console.log('resuming giveaway');
-  currentGiveaway = {
-    startTime: new Date(),
-    endTime: null,
-    elapsedTime: 7200000,
-    paused: false,
+/* Restart a paused giveaway, if one is running and is actually paused.
+ *
+ * This will change the state on the current giveaway, update the database, let
+ * the front end code know the new state and then kick off a new timer. */
+async function unpauseGiveaway(db, req, res) {
+  // Pull the ripcord if somehow this gets called when there's not already a
+  // giveaway in progress, or if there is but it's not currently paused.
+  if (currentGiveaway === undefined || currentGiveaway.paused === false) {
+    return;
   }
 
+  console.log(`Giveaway: Resuming giveaway (${humanize(currentGiveaway.duration - currentGiveaway.elapsedTime)} remaining)`);
+
+  // Reset the paused flag on the current giveaway and then update the database
+  // to make sure that it knows what the current state is.
+  currentGiveaway.paused = false;
+  await db.getModel('giveaways').update( { id: currentGiveaway.id }, currentGiveaway);
+
+  // Let interested parties know that the state changed.
   sendSocketMessage('giveaway-info', currentGiveaway);
+
+  // Set up the variables that let us know when we last ticked and last synced,
+  // then start the timer.
+  lastTickTime = lastSyncTime = Date.now();
+  giveawayTimerTick(db)
+
   res.json({success: true});
 }
 
