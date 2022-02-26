@@ -2,7 +2,22 @@
 
 const { sendSocketMessage } = require('./socket');
 
-const humanize = require("humanize-duration");
+const humanize = require("humanize-duration").humanizer({
+  language: "shortEn",
+  languages: {
+    shortEn: {
+      y: () => "y",
+      mo: () => "mo",
+      w: () => "w",
+      d: () => "d",
+      h: () => "h",
+      m: () => "m",
+      s: () => "s",
+      ms: () => "ms",
+    },
+  },
+  round: false
+});
 
 
 /* The database record that represents the currently running giveaway, if any.
