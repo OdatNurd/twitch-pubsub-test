@@ -52,10 +52,14 @@ const GiveawaySchema = {
   // unexpectedly while a giveaway is in progress.
   elapsedTime: { type: Number, defaultsTo: 0, nullable: false},
 
-  // Is the current giveaway paused? This is set to yes if the giveaway is
-  // paused while it's running, and it's also forced to be turned on if there's
-  // a giveaway in progress when the application starts.
+  // Is this giveaway paused? This is set to yes if the giveaway is paused while
+  // it's running, and it's also forced to be turned on if there's a giveaway in
+  // progress when the application starts.
   paused: { type: Boolean, defaultsTo: false, nullable: false},
+
+  // Is this giveaway cancelled? This can only happen while a giveaway is
+  // actively running and the streamer manually cancels it.
+  cancelled: { type: Boolean, defaultsTo: false, nullable: false},
 }
 
 

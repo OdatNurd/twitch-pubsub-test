@@ -123,6 +123,7 @@ async function startGiveaway(db, req, res) {
     duration: req.query.duration,
     elapsedTime: 0,
     paused: false,
+    cancelled: false,
   });
 
   // Lean on the code that knows how to restart a giveaway for the current user
@@ -234,7 +235,7 @@ async function resumeCurrentGiveaway(db, userId, autoPause) {
   // Order the giveaway entries by their start time and pluck the most recent
   // one started by this user from the list; if there is currently a giveaway
   // running, it would be this one.
-  let entry = await db.getModel('giveaways').findOne({ userId }, {
+  let entry = await db.getModel('giveaways').findOne({ userId, cancelled: false }, {
     order: ['startTime', 'desc'],
     limit: 1
   });
