@@ -152,7 +152,7 @@ async function pauseGiveaway(db, req, res) {
   console.log(`Giveaway: Pausing giveaway (${humanize(currentGiveaway.duration - currentGiveaway.elapsedTime)} remaining)`);
 
   // If there is currently a timer running, cancel it so that it stops ticking.
-  // Even if there's not, this function silently does nothing if the timer ID[
+  // Even if there's not, this function silently does nothing if the timer ID
   // you give it is not valid.
   clearTimeout(giveawayTimerID);
 
@@ -203,10 +203,33 @@ async function unpauseGiveaway(db, req, res) {
 // =============================================================================
 
 
-function cancelGiveaway(db, req, res) {
-  console.log('cancelling giveaway');
-  currentGiveaway = undefined
+/* Cancel the current giveaway, if one is actively running.
+ *
+ * This will mark the giveaway as cancelled, update the database, and then let
+ * interested parties know that the giveaway is no longer available. */
+async function cancelGiveaway(db, req, res) {
+  // Pull the ripcord if somehow this gets called when there's not already a
+  // giveaway in progress.
+  if (currentGiveaway === undefined) {
+    return;
+  }
 
+  console.log(`Giveaway: Cancelling giveaway (${humanize(currentGiveaway.duration - currentGiveaway.elapsedTime)} remaining)`);
+
+  // If there is currently a timer running, cancel it so that it stops ticking.
+  // Even if there's not, this function silently does nothing if the timer ID
+  // you give it is not valid.
+  clearTimeout(giveawayTimerID);
+
+  // Set the paused flag on the current giveaway and then update the database
+  // to make sure that it knows what the current state is.
+  currentGiveaway.cancelled = true;
+  await db.getModel('giveaways').update( { id: currentGiveaway.id }, currentGiveaway);
+
+  // Get rid of the current giveaway object now.
+  currentGiveaway = undefined;
+
+  // Broadcast that the giveaway is no longer running or even existing.
   sendSocketMessage('giveaway-info', {});
   res.json({success: true});
 }
