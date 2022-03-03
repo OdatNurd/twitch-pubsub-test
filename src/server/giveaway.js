@@ -1,7 +1,10 @@
 // =============================================================================
 
 
+const { config } = require('./config');
+const { chatSay } = require('./chat');
 const { sendSocketMessage } = require('./socket');
+
 
 const humanize = require("humanize-duration").humanizer({
   language: "shortEn",
@@ -356,37 +359,29 @@ function setupGiveawayHandler(db, app, bridge) {
  * however trigger for built in channel point redeems, since Twitch handles them
  * itself. */
 function handlePubSubRedemption(msg) {
-  sendSocketMessage('twitch-redeem', {
-    message: msg.message,
-    rewardId: msg.rewardId,
-    userDisplayName: msg.userDisplayName,
-    userId: msg.userId,
-  });
-
-  // If the incoming redemption is special, do something special with it.
-  //
-  // This particularl hard coded redeem ID is the one for the /dev/null redeem.
-  if (msg.rewardId === '648252cf-1b6d-409a-a901-1764f5abdd28') {
-    // chatSay('$heckle')
-  }
-
   console.log("-----------------------------");
-  console.log(`channelId: ${msg.channelId}`);              // channelId: 66586458
-  console.log(`defaultImage: ${msg.defaultImage}`);        // defaultImage: [object Object]
-  console.log(`id: ${msg.id}`);                            // id: d113cb94-13d3-487f-ab40-dd1d707df4e2
-  console.log(`message: ${msg.message}`);                  // message: like this
-  console.log(`redemptionDate: ${msg.redemptionDate}`);    // redemptionDate: Fri Jan 14 2022 22:50:25 GMT-0800 (Pacific Standard Time)
-  console.log(`rewardCost: ${msg.rewardCost}`);            // rewardCost: 100
-  console.log(`rewardId: ${msg.rewardId}`);                // rewardId: 648252cf-1b6d-409a-a901-1764f5abdd28
-  console.log(`rewardImage: ${msg.rewardImage}`);          // rewardImage: [object Object]
-  console.log(`rewardIsQueued: ${msg.rewardIsQueued}`);    // rewardIsQueued: false
-  console.log(`rewardPrompt: ${msg.rewardPrompt}`);        // rewardPrompt: Consign your custom message to the bit bucket
   console.log(`rewardTitle: ${msg.rewardTitle}`);          // rewardTitle: /dev/null
-  console.log(`status: ${msg.status}`);                    // status: FULFILLED
+  console.log(`rewardId: ${msg.rewardId}`);                // rewardId: 648252cf-1b6d-409a-a901-1764f5abdd28
   console.log(`userDisplayName: ${msg.userDisplayName}`);  // userDisplayName: OdatNurd
-  console.log(`userId: ${msg.userId}`);                    // userId: 66586458
-  console.log(`userName: ${msg.userName}`);                // userName: odatnurd
+  // console.log(`channelId: ${msg.channelId}`);              // channelId: 66586458
+  // console.log(`defaultImage: ${msg.defaultImage}`);        // defaultImage: [object Object]
+  // console.log(`id: ${msg.id}`);                            // id: d113cb94-13d3-487f-ab40-dd1d707df4e2
+  // console.log(`message: ${msg.message}`);                  // message: like this
+  // console.log(`redemptionDate: ${msg.redemptionDate}`);    // redemptionDate: Fri Jan 14 2022 22:50:25 GMT-0800 (Pacific Standard Time)
+  // console.log(`rewardCost: ${msg.rewardCost}`);            // rewardCost: 100
+  // console.log(`rewardImage: ${msg.rewardImage}`);          // rewardImage: [object Object]
+  // console.log(`rewardIsQueued: ${msg.rewardIsQueued}`);    // rewardIsQueued: false
+  // console.log(`rewardPrompt: ${msg.rewardPrompt}`);        // rewardPrompt: Consign your custom message to the bit bucket
+  // console.log(`status: ${msg.status}`);                    // status: FULFILLED
+  // console.log(`userId: ${msg.userId}`);                    // userId: 66586458
+  // console.log(`userName: ${msg.userName}`);                // userName: odatnurd
   console.log("-----------------------------");
+
+  // If there is an incoming redemption configured, and this is it, then we want
+  // to react to it by sending off the configured chat message.
+  if (msg.rewardId === config.get('pointRedeem.rewardId')) {
+    chatSay(config.get('pointRedeem.chatText').replace('%USERNAME%', msg.userDisplayName));
+  }
 };
 
 
