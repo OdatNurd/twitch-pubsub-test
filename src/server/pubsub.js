@@ -2,7 +2,7 @@
 
 
 const { SingleUserPubSubClient } = require('@twurple/pubsub');
-const { handleRedemption, handleSubscription, handleBits } = require('./handler');
+const { handlePubSubRedemption, handlePubSubSubscription, handlePubSubBits } = require('./giveaway');
 
 
 // =============================================================================
@@ -32,9 +32,9 @@ async function startTwitchPubSub(twitch) {
   // store the listeners as we add them.
   pubSubClient = new SingleUserPubSubClient({ authProvider: twitch.authProvider });
   pubSubListeners = await Promise.all([
-    pubSubClient.onRedemption(msg => handleRedemption(msg)),
-    pubSubClient.onSubscription(msg => handleSubscription(msg)),
-    pubSubClient.onBits(msg => handleBits(msg)),
+    pubSubClient.onRedemption(msg => handlePubSubRedemption(msg)),
+    pubSubClient.onSubscription(msg => handlePubSubSubscription(msg)),
+    pubSubClient.onBits(msg => handlePubSubBits(msg)),
   ]);
 }
 
