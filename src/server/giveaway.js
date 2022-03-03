@@ -358,7 +358,7 @@ function setupGiveawayHandler(db, app, bridge) {
  * for any custom defined channel point redemption in the channel; it does not
  * however trigger for built in channel point redeems, since Twitch handles them
  * itself. */
-function handlePubSubRedemption(msg) {
+function handlePubSubRedemption(db, msg) {
   console.log("-----------------------------");
   console.log(`rewardTitle: ${msg.rewardTitle}`);          // rewardTitle: /dev/null
   console.log(`rewardId: ${msg.rewardId}`);                // rewardId: 648252cf-1b6d-409a-a901-1764f5abdd28
@@ -391,7 +391,7 @@ function handlePubSubRedemption(msg) {
 /* Handle an incoming subscription PubSub message. This triggers for all
  * subscriptions, though we're primarily interested in gift subscriptions for
  * our purposes here. */
-function handlePubSubSubscription(msg) {
+function handlePubSubSubscription(db, msg) {
   sendSocketMessage('twitch-sub', {
     gifterDisplayName: msg.gifterDisplayName,
     gifterId: msg.gifterId,
@@ -426,7 +426,7 @@ function handlePubSubSubscription(msg) {
 
 /* Handle an incoming bit cheer PubSub message. This is triggered for all cheers
  * that occur. */
-function handlePubSubBits(msg) {
+function handlePubSubBits(db, msg) {
   sendSocketMessage('twitch-bits', {
     bits: msg.bits,
     isAnonymous: msg.isAnonymous,

@@ -54,9 +54,9 @@ async function launch() {
   // portion generates and so they need to be initialized first so they can
   // catch any possible initial events.
   setupTwitchChat(bridge);
-  setupTwitchPubSub(bridge);
+  setupTwitchPubSub(db, bridge);
   setupTwitchAuthorization(db, app, bridge);
-  setupEventTesting(app);
+  setupEventTesting(db, app);
   setupGiveawayHandler(db, app, bridge);
 
   // Set up some middleware that will serve static files out of the public folder

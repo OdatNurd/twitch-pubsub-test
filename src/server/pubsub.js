@@ -22,7 +22,7 @@ let pubSubListeners = [];
  * actively authorized user is available to the overlay, and uses the
  * authorization gained from that user to subscribe to the events that we're
  * interested in handling. */
-async function startTwitchPubSub(twitch) {
+async function startTwitchPubSub(db, twitch) {
   if (pubSubClient !== undefined) {
     return;
   }
@@ -32,9 +32,9 @@ async function startTwitchPubSub(twitch) {
   // store the listeners as we add them.
   pubSubClient = new SingleUserPubSubClient({ authProvider: twitch.authProvider });
   pubSubListeners = await Promise.all([
-    pubSubClient.onRedemption(msg => handlePubSubRedemption(msg)),
-    pubSubClient.onSubscription(msg => handlePubSubSubscription(msg)),
-    pubSubClient.onBits(msg => handlePubSubBits(msg)),
+    pubSubClient.onRedemption(msg => handlePubSubRedemption(db, msg)),
+    pubSubClient.onSubscription(msg => handlePubSubSubscription(db, msg)),
+    pubSubClient.onBits(msg => handlePubSubBits(db, msg)),
   ]);
 }
 
@@ -44,7 +44,7 @@ async function startTwitchPubSub(twitch) {
 
 /* Shut down an active Twitch PubSub connection (if there is one), removing
  * any existing listeners and shutting them down. */
-function stopTwitchPubSub(twitch) {
+function stopTwitchPubSub(db, twitch) {
   // If we previously set up listeners in this run, we need to remove them
   // before we shut down.
   if (pubSubClient !== undefined) {
@@ -62,9 +62,9 @@ function stopTwitchPubSub(twitch) {
  * broadcast from the Twitch subsystem over the provided event bridge, reacting
  * to a user being authorized or unauthorized by either starting or stopping
  * the PubSub event system, as appropriate. */
-function setupTwitchPubSub(bridge) {
-  bridge.on('twitch-authorize', twitch => startTwitchPubSub(twitch));
-  bridge.on('twitch-deauthorize', twitch => stopTwitchPubSub(twitch));
+function setupTwitchPubSub(db, bridge) {
+  bridge.on('twitch-authorize', twitch => startTwitchPubSub(db, twitch));
+  bridge.on('twitch-deauthorize', twitch => stopTwitchPubSub(db, twitch));
 }
 
 
