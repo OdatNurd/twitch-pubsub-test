@@ -50,6 +50,10 @@ select, input[type='text'] {
   text-align: center;
 }
 
+#start-giveaway-container {
+
+}
+
 #cancel-giveaway-container {
   position: fixed;
   padding: 0 0.5em;
@@ -62,4 +66,12 @@ select, input[type='text'] {
   border: 2px solid #a82846;
   background: #85243a;
   color: white;
+}
+
+#bits-test-container {
+
+}
+
+#sub-test-container {
+
 }

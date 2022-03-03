@@ -1,0 +1,15 @@
+body {
+  background-color: #252525;
+}
+
+.hide {
+  display: none !important;
+}
+
+#text {
+  display: inline-block;
+  font-size: 2em;
+  color: white;
+  background: #181819;
+  padding: 0.5em;
+}
