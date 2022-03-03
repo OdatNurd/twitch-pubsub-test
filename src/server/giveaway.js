@@ -30,6 +30,14 @@ const humanize = require("humanize-duration").humanizer({
  * although all past giveaways are archived for data reasons. */
 let currentGiveaway = undefined;
 
+/* The list of people that have contributed some number of bits or subs to the
+ * current giveaway; when this is undefined there is not a giveaway running.
+ *
+ * At all other times it's an object keyed by the userId of the user with the
+ * value being the current database record for contributions to this giveaway
+ * by that user, which accumulate for the duration all in one record. */
+let currentParticipants = undefined;
+
 /* When a giveaway timer is running, this is the ID that can be used to cancel
  * it if we no longer want it to be running. */
 let giveawayTimerID = undefined;
@@ -230,8 +238,9 @@ async function cancelGiveaway(db, req, res) {
   currentGiveaway.cancelled = true;
   await db.getModel('giveaways').update( { id: currentGiveaway.id }, currentGiveaway);
 
-  // Get rid of the current giveaway object now.
+  // Get rid of the current giveaway objects now.
   currentGiveaway = undefined;
+  currentParticipants = undefined;
 
   // Broadcast that the giveaway is no longer running or even existing.
   sendSocketMessage('giveaway-info', {});
@@ -276,6 +285,16 @@ async function resumeCurrentGiveaway(db, userId, autoPause) {
   // Set up this giveaway as the current one.
   currentGiveaway = entry;
 
+  // Fetch the list of participants to this particular giveaway; this can be an
+  // empty list if this is a new giveaway or nobody has participated yet. We
+  // want this to be an object keyed by the user's ID for ease of access.
+  const users = await db.getModel('gifters').find({ giveawayId: currentGiveaway.id });
+  currentParticipants = users.reduce((prev, cur) => {
+    prev[cur.userId] = cur;
+    return prev;
+  }, {});
+
+  // Should we automatically pause the giveaway?
   if (autoPause === true) {
     console.log(`Giveaway: Giveaway is in progress (${humanize(currentGiveaway.duration - currentGiveaway.elapsedTime)} remaining); auto-pausing it`);
     currentGiveaway.paused = true;
@@ -316,6 +335,8 @@ async function suspendCurrentGiveaway(db) {
 
   // Terminate the current giveaway, and let interested parties know.
   currentGiveaway = undefined;
+  currentParticipants = undefined;
+
   sendSocketMessage('giveaway-info', currentGiveaway);
 }
 
@@ -354,11 +375,58 @@ function setupGiveawayHandler(db, app, bridge) {
 // =============================================================================
 
 
+/* Update the gifter information for the provided userID, accruing the provided
+ * number of bits and gift subs to the user.
+ *
+ * This will add a new user to the gifters list for the current giveaway if the
+ * user isn't already in the list, and it also makes sure to update both the
+ * in memory cache as well as the database. */
+async function updateGifterInfo(db, userId, bits, subs) {
+  console.log(`updateGifterInfo(${userId}, ${bits}, ${subs})`);
+
+  // If there's not a giveaway running or there is but it's currently paused,
+  // then we don't want to do anything with this message; messages should only
+  // count when the giveaway is actively running.
+  if (currentGiveaway === undefined || currentGiveaway.paused === true) {
+    console.log(`Giveaway: Rejecting update; giveaway is not running`);
+    return;
+  }
+
+  // Get the record for this participant out of the cache; if there isn't one
+  // yet, then this user has gifted for the first time, so we need to create
+  // a new empty entry instead.
+  const gifter = currentParticipants[userId];
+  if (gifter === undefined) {
+    console.log(`Gifter was not found; adding a new record.`);
+    const userInfo = await db.getModel('gifters').create( {
+      giveawayId: currentGiveaway.id,
+      userId,
+      bits,
+      subs
+    });
+
+    console.log(`Added new gifter: ${JSON.stringify(userInfo)}`);
+    currentParticipants[userId] = userInfo;
+    return;
+  }
+
+  console.log(`Updating existing gifter record.`);
+  // We have a record for this gifter; update the record in memory and then
+  // flush it to the database.
+  gifter.bits += bits;
+  gifter.subs += subs;
+  await db.getModel('gifters').update( { id: gifter.id }, gifter);
+  console.log(`Updated gifter record: ${JSON.stringify(gifter)}`);
+}
+
+
+// =============================================================================
+
 /* Handle an incoming channel point redemption PubSub message. This will trigger
  * for any custom defined channel point redemption in the channel; it does not
  * however trigger for built in channel point redeems, since Twitch handles them
  * itself. */
-function handlePubSubRedemption(db, msg) {
+async function handlePubSubRedemption(db, msg) {
   console.log("-----------------------------");
   console.log(`rewardTitle: ${msg.rewardTitle}`);          // rewardTitle: /dev/null
   console.log(`rewardId: ${msg.rewardId}`);                // rewardId: 648252cf-1b6d-409a-a901-1764f5abdd28
@@ -391,33 +459,43 @@ function handlePubSubRedemption(db, msg) {
 /* Handle an incoming subscription PubSub message. This triggers for all
  * subscriptions, though we're primarily interested in gift subscriptions for
  * our purposes here. */
-function handlePubSubSubscription(db, msg) {
-  sendSocketMessage('twitch-sub', {
-    gifterDisplayName: msg.gifterDisplayName,
-    gifterId: msg.gifterId,
-    isAnonymous: msg.isAnonymous,
-    userDisplayName: msg.userDisplayName,
-    userId: msg.userId,
-  });
-
+async function handlePubSubSubscription(db, msg) {
   console.log("-----------------------------");
-  console.log(`cumulativeMonths: ${msg.cumulativeMonths}`);   // cumulativeMonths: 11                                            cumulativeMonths: 1
-  console.log(`giftDuration: ${msg.giftDuration}`);           // giftDuration: null                                              giftDuration: 1
+  // console.log(`cumulativeMonths: ${msg.cumulativeMonths}`);   // cumulativeMonths: 11                                            cumulativeMonths: 1
+  // console.log(`giftDuration: ${msg.giftDuration}`);           // giftDuration: null                                              giftDuration: 1
   console.log(`gifterDisplayName: ${msg.gifterDisplayName}`); // gifterDisplayName: null                                         gifterDisplayName: marisuemartin
   console.log(`gifterId: ${msg.gifterId}`);                   // gifterId: null                                                  gifterId: 499189939
-  console.log(`gifterName: ${msg.gifterName}`);               // gifterName: null                                                gifterName: marisuemartin
-  console.log(`isAnonymous: ${msg.isAnonymous}`);             // isAnonymous: false                                              isAnonymous: false
-  console.log(`isGift: ${msg.isGift}`);                       // isGift: false                                                   isGift: true
-  console.log(`isResub: ${msg.isResub}`);                     // isResub: true                                                   isResub: false
-  console.log(`message: ${msg.message}`);                     // message: [object Object]                                        message: null
-  console.log(`months: ${msg.months}`);                       // months: 11                                                      months: 1
-  console.log(`streakMonths: ${msg.streakMonths}`);           // streakMonths: 11                                                streakMonths: 0
-  console.log(`subPlan: ${msg.subPlan}`);                     // subPlan: 1000                                                   subPlan: 1000
-  console.log(`time: ${msg.time}`);                           // time: Sun Jan 16 2022 10:07:01 GMT-0800 (Pacific Standard Time) time: Sun Jan 16 2022 10:07:29 GMT-0800 (Pacific Standard Time)
-  console.log(`userDisplayName: ${msg.userDisplayName}`);     // userDisplayName: marisuemartin                                  userDisplayName: PhutBot
-  console.log(`userId: ${msg.userId}`);                       // userId: 499189939                                               userId: 56740791
-  console.log(`userName: ${msg.userName}`);                   // userName: marisuemartin                                         userName: phutbot
+  // console.log(`gifterName: ${msg.gifterName}`);               // gifterName: null                                                gifterName: marisuemartin
+  // console.log(`isAnonymous: ${msg.isAnonymous}`);             // isAnonymous: false                                              isAnonymous: false
+  // console.log(`isGift: ${msg.isGift}`);                       // isGift: false                                                   isGift: true
+  // console.log(`isResub: ${msg.isResub}`);                     // isResub: true                                                   isResub: false
+  // console.log(`message: ${msg.message}`);                     // message: [object Object]                                        message: null
+  // console.log(`months: ${msg.months}`);                       // months: 11                                                      months: 1
+  // console.log(`streakMonths: ${msg.streakMonths}`);           // streakMonths: 11                                                streakMonths: 0
+  // console.log(`subPlan: ${msg.subPlan}`);                     // subPlan: 1000                                                   subPlan: 1000
+  // console.log(`time: ${msg.time}`);                           // time: Sun Jan 16 2022 10:07:01 GMT-0800 (Pacific Standard Time) time: Sun Jan 16 2022 10:07:29 GMT-0800 (Pacific Standard Time)
+  // console.log(`userDisplayName: ${msg.userDisplayName}`);     // userDisplayName: marisuemartin                                  userDisplayName: PhutBot
+  // console.log(`userId: ${msg.userId}`);                       // userId: 499189939                                               userId: 56740791
+  // console.log(`userName: ${msg.userName}`);                   // userName: marisuemartin                                         userName: phutbot
   console.log("-----------------------------");
+
+  // In order for us to want to handle a sub message, it needs to both be a gift
+  // and not be anonymous; otherwise there's no way to track the sub on the
+  // leaderboard.
+  if (msg.isAnonymous === true || msg.isGift === false) {
+    return;
+  }
+
+  // Track this as a gift sub for the gifting user.
+  await updateGifterInfo(db, msg.gifterId, 0, 1);
+
+  // sendSocketMessage('twitch-sub', {
+  //   gifterDisplayName: msg.gifterDisplayName,
+  //   gifterId: msg.gifterId,
+  //   isAnonymous: msg.isAnonymous,
+  //   userDisplayName: msg.userDisplayName,
+  //   userId: msg.userId,
+  // });
 };
 
 
@@ -426,24 +504,33 @@ function handlePubSubSubscription(db, msg) {
 
 /* Handle an incoming bit cheer PubSub message. This is triggered for all cheers
  * that occur. */
-function handlePubSubBits(db, msg) {
-  sendSocketMessage('twitch-bits', {
-    bits: msg.bits,
-    isAnonymous: msg.isAnonymous,
-    message: msg.message,
-    totalBits: msg.totalBits,
-    userId: msg.userId,
-    userName : msg.userName,
-  });
-
+async function handlePubSubBits(db, msg) {
   console.log("-----------------------------");
   console.log(`bits: ${msg.bits}`);                // bits: 100
   console.log(`isAnonymous: ${msg.isAnonymous}`);  // isAnonymous: false
-  console.log(`message: ${msg.message}`);          // message: SeemsGood100
-  console.log(`totalBits: ${msg.totalBits}`);      // totalBits: 1454
+  // console.log(`message: ${msg.message}`);          // message: SeemsGood100
+  // console.log(`totalBits: ${msg.totalBits}`);      // totalBits: 1454
   console.log(`userId: ${msg.userId}`);            // userId: 136337257
   console.log(`userName: ${msg.userName}`);        // userName: valleydweller
   console.log("-----------------------------");
+
+  // In order for us to want to handle a bits message, it needs to not be
+  // anonymous; otherwise there's no way to track the bits on the leaderboard.
+  if (msg.isAnonymous === true) {
+    return;
+  }
+
+  // Track this as addition bits for this particular user.
+  await updateGifterInfo(db, msg.userId, msg.bits, 0);
+
+  // sendSocketMessage('twitch-bits', {
+  //   bits: msg.bits,
+  //   isAnonymous: msg.isAnonymous,
+  //   message: msg.message,
+  //   totalBits: msg.totalBits,
+  //   userId: msg.userId,
+  //   userName : msg.userName,
+  // });
 };
 
 
