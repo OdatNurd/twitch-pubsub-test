@@ -3,6 +3,8 @@
 
 const { config } = require('./config');
 
+const { v4: uuidv4 } = require('uuid');
+
 const path = require('path');
 const trilogy = require('trilogy');
 
@@ -98,6 +100,18 @@ const GifterSchema = {
 // =============================================================================
 
 
+/* Create and return a unique ID value that can be tagged into objects to
+ * identify them.
+ *
+ * The value is guaranteed to be unique for each call. */
+function objId() {
+  return uuidv4();
+}
+
+
+// =============================================================================
+
+
 /* Try to load an existing token from the database, and if we find one, use it
  * to set up the database. */
 async function initializeDatabase() {
@@ -125,5 +139,6 @@ async function initializeDatabase() {
 
 
 module.exports = {
-  initializeDatabase
+  initializeDatabase,
+  objId,
 }
