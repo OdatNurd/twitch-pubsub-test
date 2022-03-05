@@ -16,7 +16,9 @@ const trilogy = require('trilogy');
  * AccessToken class that's available in Twurple, and the field names here
  * mirror the ones used there. */
 const TokenSchema = {
-  id: 'increments',
+  // A unique identifier for this token; the table only ever stores a single
+  // token at a time, but this keeps things consistent.
+  id: { type: String, unique: true, nullable: false, primary: true},
 
   accessToken: { type: String, nullable: false },
   refreshToken: { type: String, nullable: true },
@@ -25,10 +27,20 @@ const TokenSchema = {
   expiresIn: { type: Number, defaultsTo: 0, nullable: true },
 };
 
+/* The additional model options for the token schema. */
+const TokenOptions = {
+
+}
+
+
+// =============================================================================
+
+
 /* The schema for tracking giveaways; each entry in the database represents a
  * specific giveaway, tracking when that giveaway started and when it ended. */
 const GiveawaySchema = {
-  id: 'increments',
+  // A unique identifier for this giveaway.
+  id: { type: String, unique: true, nullable: false, primary: true},
 
   // The identifier for the user that owns this giveaway; when the logged in
   // user changes, the list of potential giveaways that are running also changes
@@ -64,6 +76,14 @@ const GiveawaySchema = {
   cancelled: { type: Boolean, defaultsTo: false, nullable: false},
 }
 
+/* The additional model options for the giveaway schema. */
+const GiveawayOptions = {
+
+}
+
+
+// =============================================================================
+
 
 /* The schema for storing incoming data that is used in the overlay, which
  * includes bits that were thrown and subscriptions that were gifted. Channel
@@ -78,23 +98,29 @@ const GiveawaySchema = {
  * as data arrives; for a string of gift subs this requires multiple operations
  * because Twitch delivers sub notifications one at a time. */
 const GifterSchema = {
-  id: 'increments',
+  // A unique identifier for this giveaway.
+  id: { type: String, unique: true, nullable: false },
 
   // The giveaway that this particular gifter is a member of; the same user can
   // be in several different giveaways, though only one giveaway can be running
   // at any given time.
-  giveawayId: { type: Number, unique: true, nullable: false },
+  giveawayId: { type: String, nullable: false },
 
   // The identifier for the user that this record represents; the display and
   // user name can be looked up via this value; it never changes, unlike the
   // others.
-  userId: { type: String, unique: true, nullable: false },
+  userId: { type: String, nullable: false },
 
   // The number of bits and gift subscriptions that this user has given during
   // the current giveaway.
   bits: { type: Number, defaultsTo: 0, nullable: false },
   subs: { type: Number, defaultsTo: 0, nullable: false },
 };
+
+/* The additional model options for the gifters schema. */
+const GifterOptions = {
+  primary: ['giveawayId', 'userId']
+}
 
 
 // =============================================================================
@@ -126,9 +152,9 @@ async function initializeDatabase() {
   // Make sure that we register our models with the database so that it knows
   // how to perform queries.
   await Promise.all([
-    db.model('tokens', TokenSchema),
-    db.model('giveaways', GiveawaySchema),
-    db.model('gifters', GifterSchema),
+    db.model('tokens', TokenSchema, TokenOptions),
+    db.model('giveaways', GiveawaySchema, GiveawayOptions),
+    db.model('gifters', GifterSchema, GifterOptions),
   ]);
 
   return db;

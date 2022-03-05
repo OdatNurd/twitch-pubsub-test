@@ -7,6 +7,7 @@ const { RefreshingAuthProvider, exchangeCode } = require('@twurple/auth');
 const { ApiClient } = require('@twurple/api');
 
 const { v4: uuidv4 } = require('uuid');
+const { objId } = require('./db');
 
 const { sendSocketMessage } = require('./socket');
 const { encrypt } = require('./crypto');
@@ -229,7 +230,7 @@ async function deauthorize(db, bridge, req, res) {
     // Fetch the model that stores our token information, then remove the stored
     // token.
     const model = db.getModel('tokens');
-    await model.remove({ id: 1 });
+    await model.clear();
 
     // Shut down our access to Twitch; this will remove all cached information and
     // stop us from receiving messages or talking to the API.
@@ -288,7 +289,7 @@ async function twitchCallback(db, bridge, req, res) {
     // Persist the token into the database; here we also encrypt the access and
     // refresh tokens to make sure that they don't accidentally leak.
     await model.updateOrCreate({
-      id: 1,
+      id: objId(),
       accessToken: encrypt(token.accessToken),
       refreshToken: encrypt(token.refreshToken),
       scopes: token.scopes || [],

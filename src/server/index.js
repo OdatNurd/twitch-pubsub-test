@@ -75,7 +75,7 @@ async function launch() {
   // Try to fetch out a previous authorization token. If we find one, then we
   // can decrypt and refresh the token and set up our environment.
   const model = db.getModel('tokens');
-  const token = await model.findOne({ id: 1 });
+  const token = await model.findOne({});
   if (token !== undefined) {
     try {
       token.accessToken = decrypt(token.accessToken);
@@ -90,7 +90,7 @@ async function launch() {
       console.log(`Error loading previous token: ${e}`);
 
       // Get rid of the token we loaded; it is not actually valid.
-      await model.remove({ id: 1 });
+      await model.clear();
     }
   }
 }

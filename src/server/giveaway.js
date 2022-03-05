@@ -2,6 +2,7 @@
 
 
 const { config } = require('./config');
+const { objId } = require('./db');
 const { chatSay } = require('./chat');
 const { sendSocketMessage } = require('./socket');
 
@@ -128,6 +129,7 @@ async function startGiveaway(db, req, res) {
   // currently authorized one (if any).
   console.log(`Giveaway: New giveaway for ${req.query.userId} (${humanize(req.query.duration)})`);
   await db.getModel('giveaways').create({
+    id: objId(),
     userId: req.query.userId,
     startTime: new Date(),
     endTime: null,
@@ -399,6 +401,7 @@ async function updateGifterInfo(db, userId, bits, subs) {
   if (gifter === undefined) {
     console.log(`Gifter was not found; adding a new record.`);
     const userInfo = await db.getModel('gifters').create( {
+      id: objId(),
       giveawayId: currentGiveaway.id,
       userId,
       bits,
