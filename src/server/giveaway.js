@@ -397,28 +397,20 @@ async function updateGifterInfo(db, userId, bits, subs) {
   // Get the record for this participant out of the cache; if there isn't one
   // yet, then this user has gifted for the first time, so we need to create
   // a new empty entry instead.
-  const gifter = currentParticipants[userId];
-  if (gifter === undefined) {
-    console.log(`Gifter was not found; adding a new record.`);
-    const userInfo = await db.getModel('gifters').create( {
-      id: objId(),
-      giveawayId: currentGiveaway.id,
-      userId,
-      bits,
-      subs
-    });
+  const gifter = currentParticipants[userId] ?? {
+    id: objId(),
+    giveawayId: currentGiveaway.id,
+    userId,
+    bits: 0,
+    subs: 0
+  };
+  currentParticipants[userId] = gifter;
 
-    console.log(`Added new gifter: ${JSON.stringify(userInfo)}`);
-    currentParticipants[userId] = userInfo;
-    return;
-  }
-
-  console.log(`Updating existing gifter record.`);
   // We have a record for this gifter; update the record in memory and then
   // flush it to the database.
   gifter.bits += bits;
   gifter.subs += subs;
-  await db.getModel('gifters').update( { id: gifter.id }, gifter);
+  await db.getModel('gifters').updateOrCreate( { id: gifter.id }, gifter);
   console.log(`Updated gifter record: ${JSON.stringify(gifter)}`);
 }
 
