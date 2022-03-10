@@ -4,6 +4,7 @@
 const { config } = require('./config');
 
 const { v4: uuidv4 } = require('uuid');
+const ksuid = require('ksuid')
 
 const path = require('path');
 const trilogy = require('trilogy');
@@ -131,7 +132,7 @@ const GifterOptions = {
  *
  * The value is guaranteed to be unique for each call. */
 function objId() {
-  return uuidv4();
+  return ksuid.randomSync().string;
 }
 
 
