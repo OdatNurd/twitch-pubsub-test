@@ -1,0 +1,103 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("TWITCHLOYALTY_DATABASE")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// This model tracks the token for the currently authenticated user; the data
+// that's seen in here is directly taken from the Twurple token data that is
+// returned when we authenticate or re-authenticate.
+model Token {
+  // Unique record ID
+  id                  String  @id @unique
+
+  // The token and refresh token; the refresh token is technically not required
+  // because this structure can also track an app token, in which case there is
+  // no refresh token because one isn't needed.
+  accessToken         String
+  refreshToken        String?
+
+  // This is actually a JSON array, but Prisma doesn't support that.
+  scopes              String
+
+  // When we obtained this token and when it expires. The expiration time may
+  // not be provided in some cases.
+  obtainmentTimestamp Int     @default(0)
+  expiresIn           Int?    @default(0)
+}
+
+// This represents a Twitch user, which has a concrete userId that uniquely
+// identifies the user, as well as a changeable username and display name. The
+// userID never changes although the other values might; smarter developers
+// would do a periodic check to see if the username is still the same as it was
+// when the user was first known.
+model User {
+  // Unique record ID
+  id String @id @unique
+
+  // The core information for this user; their unique ID, their current username
+  // and their current display name; the display name is always the same as the
+  // user name except that the case can be different.
+  userId      String
+  userName    String
+  displayName String
+
+  // Foreign relations; giveaways are started by specific users, and people that
+  // participate in the giveaway are also users.
+  Giveaway    Giveaway[]
+  Gifter      Gifter[]
+}
+
+// This represents a giveaway that has or is currently occurring. This
+// associates a specific start time, duration and some other state information
+// with a list of people that have participated in that specific giveaway/
+model Giveaway {
+  // Unique record ID
+  id     String @id @unique
+
+  // The person who started this giveaway
+  owner  User   @relation(fields: [userId], references: [id])
+  userId String
+
+  // When this giveaway was launched and when it ended (if it has ended); when
+  // it hasn't ended yet, the end time is null.
+  startTime DateTime
+  endTime   DateTime?
+
+  // The expected duration of this giveaway in milliseconds, and how much of
+  // that time has already elapsed.
+  duration    Int
+  elapsedTime Int @default(0)
+
+  // An indication as to whether this giveaway is currently running or not, and
+  // if it has been cancelled. If there's a giveaway that's running when the
+  // application starts, it will be automatically paused unless it's been
+  // cancelled.
+  paused    Boolean  @default(false)
+  cancelled Boolean  @default(false)
+  Gifter    Gifter[]
+}
+
+// This represents someone who is participating in a giveaway; for any specific
+// giveaway there is only ever a single entry for each individual participant,
+// which will track the total number of bits and subs contributed by that user.
+model Gifter {
+  // Unique record ID
+  id String @id @unique
+
+  // The giveaway that this record is associated with
+  giveaway   Giveaway @relation(fields: [giveawayId], references: [id])
+  giveawayId String
+
+  // The user that is associated with this gifter record
+  gifter User   @relation(fields: [userId], references: [id])
+  userId String
+
+  // The total accumulation of bits and subs that have been donated by this user
+  // in this giveaway./
+  bits Int @default(0)
+  subs Int @default(0)
+}

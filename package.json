@@ -8,7 +8,10 @@
   "scripts": {
     "build": "parcel build",
     "watch": "parcel watch",
-    "start": "node --trace-warnings src/server/index.js"
+    "start": "node --trace-warnings src/server/index.js",
+    "bootstrap": "prisma db push",
+    "browsedb": "prisma studio",
+    "postinstall": "yarn bootstrap"
   },
   "targets": {
     "default": {
@@ -21,6 +24,7 @@
     }
   },
   "dependencies": {
+    "@prisma/client": "^3.11.0",
     "@twurple/api": "^5.0.13",
     "@twurple/auth": "^5.0.13",
     "@twurple/chat": "^5.0.13",
@@ -33,11 +37,11 @@
     "ksuid": "^3.0.0",
     "parse-duration": "^1.0.2",
     "sqlite3": "^5.0.2",
-    "trilogy": "^2.0.5",
     "uuid": "^8.3.2",
     "ws-wrapper": "^2.0.2"
   },
   "devDependencies": {
-    "parcel": "^2.2.0"
+    "parcel": "^2.2.0",
+    "prisma": "^3.11.0"
   }
 }
