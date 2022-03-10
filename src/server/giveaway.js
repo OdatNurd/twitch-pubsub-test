@@ -410,7 +410,7 @@ async function updateGifterInfo(db, userId, bits, subs) {
   // flush it to the database.
   gifter.bits += bits;
   gifter.subs += subs;
-  await db.getModel('gifters').updateOrCreate( { id: gifter.id }, gifter);
+  await db.getModel('gifters').updateOrCreate( { id: gifter.id }, { ...gifter });
   console.log(`Updated gifter record: ${JSON.stringify(gifter)}`);
 }
 
