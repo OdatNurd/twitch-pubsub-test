@@ -33,7 +33,7 @@ async function launch() {
 
   // The handle to the database that we use to persist information between runs,
   // such as our tokens and the current leaderboards (for example).
-  const db = await initializeDatabase();
+  const db = initializeDatabase();
 
   // The express application that houses the routes that we use to carry out
   // authentication with Twitch as well as serve user requests.
@@ -74,23 +74,25 @@ async function launch() {
 
   // Try to fetch out a previous authorization token. If we find one, then we
   // can decrypt and refresh the token and set up our environment.
-  const model = db.getModel('tokens');
-  const token = await model.findOne({});
-  if (token !== undefined) {
+  const token = await db.token.findFirst({});
+  if (token !== null) {
     try {
+      // Prisma doesn't allow for JSON fields or arrays, so manually convert the
+      // scopes array from a string to an array.
+      token.scopes = JSON.parse(token.scopes);
       token.accessToken = decrypt(token.accessToken);
       token.refreshToken = decrypt(token.refreshToken);
 
       // Directly invoke the routine in the Twitch code that would normally
       // be invoked by the Twitch auth flow; vaguely messy but it gets the job
       // done.
-      await setupTwitchAccess(model, token, bridge);
+      await setupTwitchAccess(db, token, bridge);
     }
     catch (e) {
       console.log(`Error loading previous token: ${e}`);
 
       // Get rid of the token we loaded; it is not actually valid.
-      await model.clear();
+      await db.token.deleteMany({});
     }
   }
 }

@@ -117,18 +117,6 @@ const config = convict({
     },
   },
 
-  // The giveaway system needs to track data for users as well as running
-  // giveaways; that is stored into the database file provided here, which will
-  // be created if it does not exist at startup.
-  database: {
-    filename: {
-      doc: 'The name of the file that the database should be stored in',
-      format: '*',
-      env: 'TWITCHLOYALTY_DATABASE',
-      default: 'database.db'
-    }
-  },
-
   // The overlay allows you to set up a channel point redeem for which it will
   // send text to the chat as the authorized user; you could use this to cause
   // the overlay to invoke commands in other bots, for example.

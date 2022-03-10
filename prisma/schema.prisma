@@ -7,48 +7,50 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// This model tracks the token for the currently authenticated user; the data
-// that's seen in here is directly taken from the Twurple token data that is
-// returned when we authenticate or re-authenticate.
-model Token {
-  // Unique record ID
-  id                  String  @id @unique
-
-  // The token and refresh token; the refresh token is technically not required
-  // because this structure can also track an app token, in which case there is
-  // no refresh token because one isn't needed.
-  accessToken         String
-  refreshToken        String?
-
-  // This is actually a JSON array, but Prisma doesn't support that.
-  scopes              String
-
-  // When we obtained this token and when it expires. The expiration time may
-  // not be provided in some cases.
-  obtainmentTimestamp Int     @default(0)
-  expiresIn           Int?    @default(0)
-}
-
 // This represents a Twitch user, which has a concrete userId that uniquely
 // identifies the user, as well as a changeable username and display name. The
 // userID never changes although the other values might; smarter developers
 // would do a periodic check to see if the username is still the same as it was
 // when the user was first known.
 model User {
-  // Unique record ID
-  id String @id @unique
-
   // The core information for this user; their unique ID, their current username
   // and their current display name; the display name is always the same as the
   // user name except that the case can be different.
-  userId      String
+  userId      String @id @unique
   userName    String
   displayName String
 
   // Foreign relations; giveaways are started by specific users, and people that
   // participate in the giveaway are also users.
-  Giveaway    Giveaway[]
-  Gifter      Gifter[]
+  Giveaway Giveaway[]
+  Gifter   Gifter[]
+  Token    Token?
+}
+
+// This model tracks the token for the currently authenticated user; the data
+// that's seen in here is directly taken from the Twurple token data that is
+// returned when we authenticate or re-authenticate.
+model Token {
+  // Unique record ID
+  id String @id @unique
+
+  // The owner of this token
+  owner  User?   @relation(fields: [userId], references: [userId])
+  userId String? @unique
+
+  // The token and refresh token; the refresh token is technically not required
+  // because this structure can also track an app token, in which case there is
+  // no refresh token because one isn't needed.
+  accessToken  String
+  refreshToken String?
+
+  // This is actually a JSON array, but Prisma doesn't support that.
+  scopes String
+
+  // When we obtained this token and when it expires. The expiration time may
+  // not be provided in some cases.
+  obtainmentTimestamp Int  @default(0)
+  expiresIn           Int? @default(0)
 }
 
 // This represents a giveaway that has or is currently occurring. This
@@ -56,10 +58,10 @@ model User {
 // with a list of people that have participated in that specific giveaway/
 model Giveaway {
   // Unique record ID
-  id     String @id @unique
+  id String @id @unique
 
   // The person who started this giveaway
-  owner  User   @relation(fields: [userId], references: [id])
+  owner  User   @relation(fields: [userId], references: [userId])
   userId String
 
   // When this giveaway was launched and when it ended (if it has ended); when
@@ -93,7 +95,7 @@ model Gifter {
   giveawayId String
 
   // The user that is associated with this gifter record
-  gifter User   @relation(fields: [userId], references: [id])
+  gifter User   @relation(fields: [userId], references: [userId])
   userId String
 
   // The total accumulation of bits and subs that have been donated by this user

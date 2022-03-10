@@ -92,7 +92,7 @@ function sendTwitchAuthUpdate(socket) {
 
 /* Given an object that contains token data, set up the appropriate Twitch
  * integrations. */
-async function setupTwitchAccess(model, token, bridge) {
+async function setupTwitchAccess(db, token, bridge) {
   // If we've already set up Twitch access, be a giant coward and refuse to do
   // it again. The user needs to deauth first.
   if (twitch.authProvider !== undefined) {
@@ -109,12 +109,15 @@ async function setupTwitchAccess(model, token, bridge) {
         clientSecret: clientSecret,
         onRefresh: async newData => {
           console.log(`Refreshing user token`);
-          await model.update({ id: 1 }, {
-            accessToken: encrypt(newData.accessToken),
-            refreshToken: encrypt(newData.refreshToken),
-            scopes: newData.scopes || [],
-            obtainmentTimestamp: newData.obtainmentTimestamp,
-            expiresIn: newData.expiresIn
+          await db.token.update({
+            where: { id: token.id },
+            data: {
+              accessToken: encrypt(newData.accessToken),
+              refreshToken: encrypt(newData.refreshToken),
+              scopes: JSON.stringify(newData.scopes || []),
+              obtainmentTimestamp: newData.obtainmentTimestamp,
+              expiresIn: newData.expiresIn
+            }
           });
         }
       },
@@ -229,8 +232,7 @@ async function deauthorize(db, bridge, req, res) {
   if (twitch.authProvider !== undefined) {
     // Fetch the model that stores our token information, then remove the stored
     // token.
-    const model = db.getModel('tokens');
-    await model.clear();
+    await db.token.deleteMany({});
 
     // Shut down our access to Twitch; this will remove all cached information and
     // stop us from receiving messages or talking to the API.
@@ -252,9 +254,6 @@ async function deauthorize(db, bridge, req, res) {
  * parameter that we gave Twitch when we started the authorization attempt, so
  * that we can verify that it's valid. */
 async function twitchCallback(db, bridge, req, res) {
-  // Fetch the model that stores our token information.
-  const model = db.getModel('tokens');
-
   // The query parameters that come back include a code value that we need to
   // use to obtain our actual access token and the state value that we
   // originally provided to Twitch when the authorization started.
@@ -286,19 +285,20 @@ async function twitchCallback(db, bridge, req, res) {
       clientSecret,
       code, redirect_uri);
 
-    // Persist the token into the database; here we also encrypt the access and
-    // refresh tokens to make sure that they don't accidentally leak.
-    await model.updateOrCreate({
-      id: objId(),
-      accessToken: encrypt(token.accessToken),
-      refreshToken: encrypt(token.refreshToken),
-      scopes: token.scopes || [],
-      obtainmentTimestamp: token.obtainmentTimestamp,
-      expiresIn: token.expiresIn,
+    // Create a new token record, giving it a new unique ID.
+    await db.token.create({
+      data: {
+        id: objId(),
+        accessToken: encrypt(token.accessToken),
+        refreshToken: encrypt(token.refreshToken),
+        scopes: JSON.stringify(token.scopes || []),
+        obtainmentTimestamp: token.obtainmentTimestamp,
+        expiresIn: token.expiresIn
+      }
     });
 
     // Set up our access to Twitch, including our authorization
-    await setupTwitchAccess(model, token, bridge);
+    await setupTwitchAccess(db, token, bridge);
   }
 
   return res.redirect('/panel/');
