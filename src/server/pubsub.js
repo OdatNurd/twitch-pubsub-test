@@ -32,9 +32,9 @@ async function startTwitchPubSub(db, twitch) {
   // store the listeners as we add them.
   pubSubClient = new SingleUserPubSubClient({ authProvider: twitch.authProvider });
   pubSubListeners = await Promise.all([
-    pubSubClient.onRedemption(msg => handlePubSubRedemption(db, msg)),
-    pubSubClient.onSubscription(msg => handlePubSubSubscription(db, msg)),
-    pubSubClient.onBits(msg => handlePubSubBits(db, msg)),
+    pubSubClient.onRedemption(msg => handlePubSubRedemption(db, twitch, msg)),
+    pubSubClient.onSubscription(msg => handlePubSubSubscription(db, twitch, msg)),
+    pubSubClient.onBits(msg => handlePubSubBits(db, twitch, msg)),
   ]);
 }
 

@@ -56,7 +56,7 @@ async function launch() {
   setupTwitchChat(bridge);
   setupTwitchPubSub(db, bridge);
   setupTwitchAuthorization(db, app, bridge);
-  setupEventTesting(db, app);
+  setupEventTesting(db, app, bridge);
   setupGiveawayHandler(db, app, bridge);
 
   // Set up some middleware that will serve static files out of the public folder

@@ -18,7 +18,7 @@ model User {
   // user name except that the case can be different.
   userId      String @id @unique
   userName    String
-  displayName String
+  displayName String?
 
   // Foreign relations; giveaways are started by specific users, and people that
   // participate in the giveaway are also users.

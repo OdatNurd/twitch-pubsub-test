@@ -57,6 +57,37 @@ let lastSyncTime = 0;
 // =============================================================================
 
 
+/* If there is currently a giveaway object available, flush it's current data
+ * to disk. */
+async function updateCurrentGiveaway(db)
+{
+  if (currentGiveaway !== undefined) {
+    return db.giveaway.update({
+      where: { id: currentGiveaway.id },
+      data: { ...currentGiveaway }
+    });
+  }
+}
+
+
+// =============================================================================
+
+
+/* Given a Twitch PubSub message, extract and return an objec that contains the
+ * information about the user that sent the message; this will always include
+ * the userId and the userName, and can optionally include the display name. */
+function getMsgUser(msg) {
+  return {
+    userId: msg.gifterId || msg.userId,
+    userName: msg.gifterName || msg.userName,
+    displayName: msg.gifterDisplayName
+  }
+}
+
+
+// =============================================================================
+
+
 /* Process one tick of the giveaway timer; this is used to keep the database
  * updated with currently elapsed times on the giveaway as well as to mark when
  * the giveaway is completed. */
@@ -78,7 +109,7 @@ async function giveawayTimerTick(db) {
     console.log('Giveaway: Giveaway has ended');
 
     currentGiveaway.endTime = new Date();
-    await db.getModel('giveaways').update( { id: currentGiveaway.id }, currentGiveaway);
+    await updateCurrentGiveaway(db)
 
     // This giveaway is now completed, so we should tell interested parties
     // about it.
@@ -93,7 +124,7 @@ async function giveawayTimerTick(db) {
 
   // Dump the current information to the database.
   if (thisTime - lastSyncTime >= 10000) {
-    await db.getModel('giveaways').update( { id: currentGiveaway.id }, currentGiveaway);
+    await updateCurrentGiveaway(db)
     lastSyncTime = thisTime;
   }
 
@@ -128,16 +159,18 @@ async function startGiveaway(db, req, res) {
   // as non-paused and can in theory be for any user and not necessarily the
   // currently authorized one (if any).
   console.log(`Giveaway: New giveaway for ${req.query.userId} (${humanize(req.query.duration)})`);
-  await db.getModel('giveaways').create({
-    id: objId(),
-    userId: req.query.userId,
-    startTime: new Date(),
-    endTime: null,
+  await db.giveaway.create({
+    data: {
+      id: objId(),
+      userId: req.query.userId,
+      startTime: new Date(),
+      endTime: null,
 
-    duration: req.query.duration,
-    elapsedTime: 0,
-    paused: false,
-    cancelled: false,
+      duration: parseInt(req.query.duration),
+      elapsedTime: 0,
+      paused: false,
+      cancelled: false
+    }
   });
 
   // Lean on the code that knows how to restart a giveaway for the current user
@@ -173,7 +206,7 @@ async function pauseGiveaway(db, req, res) {
   // Set the paused flag on the current giveaway and then update the database
   // to make sure that it knows what the current state is.
   currentGiveaway.paused = true;
-  await db.getModel('giveaways').update( { id: currentGiveaway.id }, currentGiveaway);
+  await updateCurrentGiveaway(db)
 
   // Let everyone know the new state of the giveaway.
   sendSocketMessage('giveaway-info', currentGiveaway);
@@ -200,7 +233,7 @@ async function unpauseGiveaway(db, req, res) {
   // Reset the paused flag on the current giveaway and then update the database
   // to make sure that it knows what the current state is.
   currentGiveaway.paused = false;
-  await db.getModel('giveaways').update( { id: currentGiveaway.id }, currentGiveaway);
+  await updateCurrentGiveaway(db)
 
   // Let interested parties know that the state changed.
   sendSocketMessage('giveaway-info', currentGiveaway);
@@ -238,7 +271,7 @@ async function cancelGiveaway(db, req, res) {
   // Set the paused flag on the current giveaway and then update the database
   // to make sure that it knows what the current state is.
   currentGiveaway.cancelled = true;
-  await db.getModel('giveaways').update( { id: currentGiveaway.id }, currentGiveaway);
+  await updateCurrentGiveaway(db)
 
   // Get rid of the current giveaway objects now.
   currentGiveaway = undefined;
@@ -265,32 +298,38 @@ async function cancelGiveaway(db, req, res) {
  * The giveaway data is updated, but the timer doesn't actually start until the
  * user requests it via the controls in the panel. */
 async function resumeCurrentGiveaway(db, userId, autoPause) {
-  // console.log('==================================');
-  // console.log(new Date());
-  // console.log(await db.getModel('giveaways').find({}));
-  // console.log('==================================');
-
-  // Order the giveaway entries by their start time and pluck the most recent
-  // one started by this user from the list; if there is currently a giveaway
-  // running, it would be this one.
-  let entry = await db.getModel('giveaways').findOne({ userId, cancelled: false }, {
-    order: ['startTime', 'desc'],
-    limit: 1
+  // Check to see if there's a giveaway in progress for this particular user
+  // that isn't cancelled; the list of potential candidates is sorted based on
+  // the start time so we can always gather the most recent.
+  const entry = await db.giveaway.findFirst({
+    where: {
+      userId,
+      cancelled: false,
+      endTime: null
+    },
+    orderBy: { startTime: 'desc' },
+    include: { Gifter: true },
   });
 
   // This giveaway could be the current giveaway, but for that to be the case
-  // there has to be some amount of time remaining in the duration.
-  if (entry === undefined || entry.elapsedTime >= entry.duration) {
+  // there has to be some amount of time remaining in the duration and it can't
+  // be cancelled.
+  if (entry === null || entry.elapsedTime >= entry.duration) {
     return;
   }
 
-  // Set up this giveaway as the current one.
+  // This one looks good, so use this as the current giveaway
   currentGiveaway = entry;
+  console.dir(entry)
 
-  // Fetch the list of participants to this particular giveaway; this can be an
-  // empty list if this is a new giveaway or nobody has participated yet. We
-  // want this to be an object keyed by the user's ID for ease of access.
-  const users = await db.getModel('gifters').find({ giveawayId: currentGiveaway.id });
+  // The list of people that have giften in this giveaway already (if any) is
+  // a part of the object; pull it out and remove it from the object, since
+  // we use other means to update it.
+  const users = currentGiveaway.Gifter;
+  delete currentGiveaway.Gifter;
+
+  // Set up the list of current participants by unwrapping the list of found
+  // users and storing them into a cache that's indexed by their userId.
   currentParticipants = users.reduce((prev, cur) => {
     prev[cur.userId] = cur;
     return prev;
@@ -300,7 +339,7 @@ async function resumeCurrentGiveaway(db, userId, autoPause) {
   if (autoPause === true) {
     console.log(`Giveaway: Giveaway is in progress (${humanize(currentGiveaway.duration - currentGiveaway.elapsedTime)} remaining); auto-pausing it`);
     currentGiveaway.paused = true;
-    await db.getModel('giveaways').update({ id: currentGiveaway.id }, currentGiveaway);
+    await updateCurrentGiveaway(db)
   }
 
   // If the current giveaway is not paused, then we need to set up a timer that
@@ -333,7 +372,7 @@ async function suspendCurrentGiveaway(db) {
   // have an updated accounting of how much time has elapsed; also pause it for
   // good measure.
   currentGiveaway.paused = true;
-  await db.getModel('giveaways').update({ id: currentGiveaway.id }, currentGiveaway);
+  await updateCurrentGiveaway(db)
 
   // Terminate the current giveaway, and let interested parties know.
   currentGiveaway = undefined;
@@ -383,8 +422,8 @@ function setupGiveawayHandler(db, app, bridge) {
  * This will add a new user to the gifters list for the current giveaway if the
  * user isn't already in the list, and it also makes sure to update both the
  * in memory cache as well as the database. */
-async function updateGifterInfo(db, userId, bits, subs) {
-  console.log(`updateGifterInfo(${userId}, ${bits}, ${subs})`);
+async function updateGifterInfo(db, twitch, user, bits, subs) {
+  console.log(`updateGifterInfo(${user.userId}/${user.userName}/${user.displayName}, ${bits}, ${subs})`);
 
   // If there's not a giveaway running or there is but it's currently paused,
   // then we don't want to do anything with this message; messages should only
@@ -394,24 +433,80 @@ async function updateGifterInfo(db, userId, bits, subs) {
     return;
   }
 
-  // Get the record for this participant out of the cache; if there isn't one
-  // yet, then this user has gifted for the first time, so we need to create
-  // a new empty entry instead.
-  const gifter = currentParticipants[userId] ?? {
-    id: objId(),
-    giveawayId: currentGiveaway.id,
-    userId,
-    bits: 0,
-    subs: 0
-  };
-  currentParticipants[userId] = gifter;
+  // Get the record for this giveaway participant out of the cache
+  let gifter = currentParticipants[user.userId];
+
+  // If we didn't get a record, then we don't know anything about this particular
+  // user in relation to this giveaway yet, so we need to insert a new gifter
+  // record for them.
+  if (gifter === undefined) {
+    currentParticipants[user.userId] = gifter = {
+      id: objId(),
+      giveawayId: currentGiveaway.id,
+      userId: user.userId,
+      bits,
+      subs,
+    }
+
+    console.log(`Added gifter record: ${JSON.stringify(gifter)}`);
+    const record = await db.gifter.create({
+      data: {
+        id: gifter.id,
+        giveaway: { connect: { id: gifter.giveawayId }},
+        gifter: {
+          connectOrCreate: {
+            where: { userId: gifter.userId},
+            create: { ...user }
+          },
+        },
+        bits: gifter.bits,
+        subs: gifter.subs
+      },
+      include: {
+        gifter: true
+      }
+    });
+
+    // If his user doesn't have a known display name, it means that this is the
+    // first time this user has ever done anything in any giveaway, and their
+    // donation was bits, which doesn't convey that information.
+    //
+    // Ask Twitch API to get the details for this user so that we can get their
+    // display name
+    if (record.gifter.displayName === null) {
+      console.log(`=> Need to look up the display name for ${record.gifter.userName}`);
+      const userInfo = await twitch.api.users.getUserById(gifter.userId);
+      await db.user.update({
+        where: { userId: gifter.userId },
+        data: {
+          userName: userInfo.name,
+          displayName: userInfo.displayName
+        }
+      });
+
+      console.log(`=> Updated information: ${userInfo.id}/${userInfo.name}/${userInfo.displayName}`);
+    }
+
+    return;
+  }
 
   // We have a record for this gifter; update the record in memory and then
   // flush it to the database.
   gifter.bits += bits;
   gifter.subs += subs;
-  await db.getModel('gifters').updateOrCreate( { id: gifter.id }, { ...gifter });
+
   console.log(`Updated gifter record: ${JSON.stringify(gifter)}`);
+  await db.gifter.update({
+    where: { id: gifter.id },
+    data: {
+      bits: {
+        increment: bits
+      },
+      subs: {
+        increment: subs
+      }
+    },
+  });
 }
 
 
@@ -421,7 +516,7 @@ async function updateGifterInfo(db, userId, bits, subs) {
  * for any custom defined channel point redemption in the channel; it does not
  * however trigger for built in channel point redeems, since Twitch handles them
  * itself. */
-async function handlePubSubRedemption(db, msg) {
+async function handlePubSubRedemption(db, twitch, msg) {
   console.log("-----------------------------");
   console.log(`rewardTitle: ${msg.rewardTitle}`);          // rewardTitle: /dev/null
   console.log(`rewardId: ${msg.rewardId}`);                // rewardId: 648252cf-1b6d-409a-a901-1764f5abdd28
@@ -454,7 +549,7 @@ async function handlePubSubRedemption(db, msg) {
 /* Handle an incoming subscription PubSub message. This triggers for all
  * subscriptions, though we're primarily interested in gift subscriptions for
  * our purposes here. */
-async function handlePubSubSubscription(db, msg) {
+async function handlePubSubSubscription(db, twitch, msg) {
   console.log("-----------------------------");
   // console.log(`cumulativeMonths: ${msg.cumulativeMonths}`);   // cumulativeMonths: 11                                            cumulativeMonths: 1
   // console.log(`giftDuration: ${msg.giftDuration}`);           // giftDuration: null                                              giftDuration: 1
@@ -482,7 +577,7 @@ async function handlePubSubSubscription(db, msg) {
   }
 
   // Track this as a gift sub for the gifting user.
-  await updateGifterInfo(db, msg.gifterId, 0, 1);
+  await updateGifterInfo(db, twitch, getMsgUser(msg), 0, 1);
 
   // sendSocketMessage('twitch-sub', {
   //   gifterDisplayName: msg.gifterDisplayName,
@@ -499,7 +594,7 @@ async function handlePubSubSubscription(db, msg) {
 
 /* Handle an incoming bit cheer PubSub message. This is triggered for all cheers
  * that occur. */
-async function handlePubSubBits(db, msg) {
+async function handlePubSubBits(db, twitch, msg) {
   console.log("-----------------------------");
   console.log(`bits: ${msg.bits}`);                // bits: 100
   console.log(`isAnonymous: ${msg.isAnonymous}`);  // isAnonymous: false
@@ -516,7 +611,7 @@ async function handlePubSubBits(db, msg) {
   }
 
   // Track this as addition bits for this particular user.
-  await updateGifterInfo(db, msg.userId, msg.bits, 0);
+  await updateGifterInfo(db, twitch, getMsgUser(msg), msg.bits, 0);
 
   // sendSocketMessage('twitch-bits', {
   //   bits: msg.bits,
