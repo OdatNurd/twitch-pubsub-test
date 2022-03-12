@@ -10,7 +10,7 @@ const { v4: uuidv4 } = require('uuid');
 const { objId } = require('./db');
 
 const { sendSocketMessage } = require('./socket');
-const { encrypt } = require('./crypto');
+const { encrypt, decrypt } = require('./crypto');
 
 
 // =============================================================================
@@ -90,14 +90,22 @@ function sendTwitchAuthUpdate(socket) {
 // =============================================================================
 
 
-/* Given an object that contains token data, set up the appropriate Twitch
- * integrations. */
+/* Given an object that is a database record that represents token data, set up
+ * our Twitch integrations.
+ *
+ * If this token is owned by a user who is not already in the user list, then
+ * this will add them and associate them with the token. */
 async function setupTwitchAccess(db, token, bridge) {
   // If we've already set up Twitch access, be a giant coward and refuse to do
   // it again. The user needs to deauth first.
   if (twitch.authProvider !== undefined) {
     return;
   }
+
+  // Our incoming token data is encrypted, so before we can use it for anything
+  // we need to decrypt it.
+  token.accessToken = decrypt(token.accessToken);
+  token.refreshToken = decrypt(token.refreshToken);
 
   try {
     // Create a Twurple authorization provider; this will take the token info as
@@ -128,6 +136,39 @@ async function setupTwitchAccess(db, token, bridge) {
     // use it to gather information about the current user.
     twitch.api = new ApiClient({ authProvider: twitch.authProvider });
     twitch.userInfo = await twitch.api.users.getMe();
+
+    // If our incoming token doesn't have a userId in it yet, then we either
+    // need to create a new record for that user or associate the token with the
+    // existing record; a user could be in the table because they authorized
+    // previously.
+    if (token.userId === null) {
+      // Try to find an existing user record in the database for this particular
+      // user; there might be one from a previous authorization or gifting
+      // incident.
+      let dbUser = await db.user.findFirst({
+        where: { userId: twitch.userInfo.userId }
+      });
+
+      // If we didn't find anything, add in a new record for that user.
+      if (dbUser == null) {
+        dbUser = await db.user.create({
+          data: {
+            userId: twitch.userInfo.id,
+            userName: twitch.userInfo.name,
+            displayName: twitch.userInfo.displayName
+          }
+        });
+      }
+
+      // Update the relation in the token to know that this is the associated
+      // user.
+      await db.token.update({
+        where: { id: token.id },
+        data: {
+          userId: dbUser.userId
+        }
+      });
+    }
   }
   catch (e) {
     // If there was an error, make sure that everyone knows that Twitch is not
@@ -280,20 +321,22 @@ async function twitchCallback(db, bridge, req, res) {
   if (code !== undefined) {
     // Exchange the code we were given with Twitch to get an access code. This
     // makes a request to the Twitch back end.
-    const token = await exchangeCode(
+    const rawToken = await exchangeCode(
       clientId,
       clientSecret,
       code, redirect_uri);
 
-    // Create a new token record, giving it a new unique ID.
-    await db.token.create({
+    // Create a new token record in the database from the raw token we got.  In
+    // this record we need to make sure that the access and refresh tokens  are
+    // encrypted.
+    const token = await db.token.create({
       data: {
         id: objId(),
-        accessToken: encrypt(token.accessToken),
-        refreshToken: encrypt(token.refreshToken),
-        scopes: JSON.stringify(token.scopes || []),
-        obtainmentTimestamp: token.obtainmentTimestamp,
-        expiresIn: token.expiresIn
+        accessToken: encrypt(rawToken.accessToken),
+        refreshToken: encrypt(rawToken.refreshToken),
+        scopes: JSON.stringify(rawToken.scopes || []),
+        obtainmentTimestamp: rawToken.obtainmentTimestamp,
+        expiresIn: rawToken.expiresIn
       }
     });
 

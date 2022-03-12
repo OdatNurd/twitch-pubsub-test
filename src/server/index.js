@@ -80,8 +80,6 @@ async function launch() {
       // Prisma doesn't allow for JSON fields or arrays, so manually convert the
       // scopes array from a string to an array.
       token.scopes = JSON.parse(token.scopes);
-      token.accessToken = decrypt(token.accessToken);
-      token.refreshToken = decrypt(token.refreshToken);
 
       // Directly invoke the routine in the Twitch code that would normally
       // be invoked by the Twitch auth flow; vaguely messy but it gets the job
