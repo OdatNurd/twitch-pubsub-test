@@ -49,7 +49,7 @@ async function enterTwitchChat(twitch) {
     // uses a different rate limiter. If the bot is not ACTUALLY a mod and you
     // do this, you may end up getting it throttled, which is Not Good (tm).
     isAlwaysMod: true,
-  });
+  })
 
   // Set up the listeners for chat events that we're interested in handling;
   // these are captured into a list so we can destroy them later.
