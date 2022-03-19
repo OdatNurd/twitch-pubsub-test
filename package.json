@@ -38,7 +38,8 @@
     "parse-duration": "^1.0.2",
     "sqlite3": "^5.0.2",
     "uuid": "^8.3.2",
-    "ws-wrapper": "^2.0.2"
+    "ws-wrapper": "^2.0.2",
+    "gsap": "npm:@gsap/shockingly"
   },
   "devDependencies": {
     "parcel": "^2.2.0",
