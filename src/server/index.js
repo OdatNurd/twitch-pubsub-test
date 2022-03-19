@@ -40,11 +40,14 @@ async function launch() {
   const app = express();
   app.use(express.json());
 
-  // Handle requests from clients that want to know what port we serve our
-  // websockets from, so that they know where to connect. This port is
-  // controlled by the server.
+  // Handle requests from clients that want to know some runtime configuration
+  // information such as the websocket port to connect on or the current
+  // locations of various overlay elements.
   app.get('/config', async (req, res) => {
-    res.json({socketPort: config.get('server.socketPort')});
+    res.json({
+      socketPort: config.get('server.socketPort'),
+      overlays: await db.overlay.findMany({})
+    });
   });
 
   // Set up the our chat system, the routes for our Twitch authorization and for

@@ -409,6 +409,14 @@ function setupGiveawayHandler(db, app, bridge) {
       elapsedTime: currentGiveaway?.elapsedTime,
       paused: currentGiveaway?.paused,
     });
+
+    socket.on('overlay-drag', async (data) => {
+      await db.overlay.upsert({
+        where: { name: data.name },
+        create: { ...data },
+        update: { ...data }
+      });
+    });
   });
 }
 

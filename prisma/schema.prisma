@@ -103,3 +103,13 @@ model Gifter {
   bits Int @default(0)
   subs Int @default(0)
 }
+
+// This represents the positioning information for various overlay elements;
+// the keys are the name of the overlay as provided by the overlay when the
+// position changed, and the x and y are the translated position of the item.
+model Overlay {
+  name String @id @unique
+
+  x Int
+  y Int
+}

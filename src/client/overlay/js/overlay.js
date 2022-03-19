@@ -30,6 +30,8 @@ const humanize = require("humanize-duration").humanizer({
 
 /* The div that contains the current countdown text. */
 const countdownTxt = document.getElementById('countdown-clock');
+const giftersSubsTct = document.getElementById('gifters-subs');
+const giftersBitsTct = document.getElementById('gifters-bits');
 
 /* The status of the currently active giveaway (if any); this tracks things like
  * the duration and the elapsed time. */
@@ -61,7 +63,6 @@ function setupTextBox(authorized, username) {
  * tell the back end where the user decided the element that was dragged should
  * appear on the overlay. */
 function dragEnder(target, socket) {
-  // transform: translate3d(633px, 286px, 0px);
   const props = gsap.getProperty(target)
   socket.emit('overlay-drag', {
     name: target.id,
@@ -88,14 +89,35 @@ async function setup() {
   const config = await getConfig();
   const socket = getWebSocket(location.hostname, config.socketPort);
 
-  // Make the countdown text div draggable; when the drag ends, this will ship
-  // a message to the back end to tell it the final location so that it can be
-  // persisted.
-  Draggable.create(countdownTxt, {
-    bounds: document.getElementById('viewport'),
-    onDragEnd: function () { dragEnder(this.target, socket) }
+  // For all of the overlay elements that were loaded, look them up in the DOM
+  // and, if found, set an appropriate transformation property upon them.
+  config.overlays.forEach(overlay => {
+    const element = document.getElementById(overlay.name);
+    if (element !== null) {
+      element.style.transform = `translate3d(${overlay.x}px, ${overlay.y}px, 0px)`;
+    }
   });
 
+  // Set up all of our draggable elements; this needs to happen after a short
+  // delay or sometimes (for unknown, sketchy and slightly skeevy reasons) the
+  // above set of the translation will be clobbered and the item will appear in
+  // the top left corner with no translation. Wacky.
+  window.setTimeout(() => {
+    Draggable.create(countdownTxt, {
+      bounds: document.getElementById('viewport'),
+      onDragEnd: function () { dragEnder(this.target, socket) }
+    });
+
+    Draggable.create(giftersSubsTct, {
+      bounds: document.getElementById('viewport'),
+      onDragEnd: function () { dragEnder(this.target, socket) }
+    });
+
+    Draggable.create(giftersBitsTct, {
+      bounds: document.getElementById('viewport'),
+      onDragEnd: function () { dragEnder(this.target, socket) }
+    });
+  }, 1000);
 
   // When the information on the current giveaway changes, take an action; this
   // triggers when  a new giveaway starts, one ends, or the pause state changes.
