@@ -39,6 +39,13 @@ let currentGiveaway = undefined;
  * by that user, which accumulate for the duration all in one record. */
 let currentParticipants = undefined;
 
+/* These hold the handles for the debounced calls we make to send off overlay
+ * updates as data changes. They're undefined when there is not an update
+ * pending and some value otherwise; we initalize them to undefined because the
+ * clearTimeout() call silently drops invalid arguments. */
+let bitsUpdateId = undefined;
+let subsUpdateId = undefined;
+
 /* When a giveaway timer is running, this is the ID that can be used to cancel
  * it if we no longer want it to be running. */
 let giveawayTimerID = undefined;
@@ -81,6 +88,53 @@ function getMsgUser(msg) {
     userId: msg.gifterId || msg.userId,
     userName: msg.gifterName || msg.userName,
     displayName: msg.gifterDisplayName
+  }
+}
+
+
+// =============================================================================
+
+
+/* Schedule for transmission to all connected client pages a message that will
+ * give them the current list of people that have gifted either bits, subs or
+ * both.
+ *
+ * This will debounce the transmission, so it's safe to invoke this as often as
+ * you like. */
+function transmitLeaderInfo(bits, subs) {
+  console.log(`transmitLeaderInfo(${bits}, ${subs})`);
+
+  // Reduce the list of participants to a list of those that have the property
+  // that we're interested in, and send it off.
+  //
+  // This can be called to send updates that lets the other end know that nobody
+  // is in the list (say when cancelling a giveaway); in such a case the list of
+  // current participants doesn't exist, so we want to send an empty update.
+  const gatherUpdate = (msg, field) => {
+    const update = Object.values(currentParticipants || {}).reduce((prev, cur) => {
+      if ((field === 'subs' && cur.subs !== 0) || (field === 'bits' && cur.bits !== 0)) {
+        prev.push({
+          userId: cur.userId,
+          name: cur.gifter.displayName || cur.gifter.userName,
+          score: cur[field],
+        });
+      }
+      return prev;
+    }, []);
+    update.sort((left, right) => right.score - left.score);
+
+    console.dir(update);
+    sendSocketMessage(msg, update);
+  };
+
+  if (subs === true) {
+    clearTimeout(subsUpdateId)
+    subsUpdateId = setTimeout(() => gatherUpdate('leaderboard-subs-update', "subs"), 1000);
+  }
+
+  if (bits === true) {
+    clearTimeout(bitsUpdateId)
+    bitsUpdateId = setTimeout(() => gatherUpdate('leaderboard-bits-update', "bits"), 1000);
   }
 }
 
@@ -279,6 +333,8 @@ async function cancelGiveaway(db, req, res) {
 
   // Broadcast that the giveaway is no longer running or even existing.
   sendSocketMessage('giveaway-info', {});
+  transmitLeaderInfo(true, true);
+
   res.json({success: true});
 }
 
@@ -329,11 +385,15 @@ async function resumeCurrentGiveaway(db, userId, autoPause) {
   delete currentGiveaway.Gifter;
 
   // Set up the list of current participants by unwrapping the list of found
-  // users and storing them into a cache that's indexed by their userId.
+  // users and storing them into a cache that's indexed by their userId. There
+  // are three versions here; overall participants, people that have contributed
+  // bits, and people that have contributed subs.
   currentParticipants = users.reduce((prev, cur) => {
     prev[cur.userId] = cur;
     return prev;
   }, {});
+  console.dir(currentParticipants);
+  transmitLeaderInfo(true, true);
 
   // Should we automatically pause the giveaway?
   if (autoPause === true) {
@@ -379,6 +439,7 @@ async function suspendCurrentGiveaway(db) {
   currentParticipants = undefined;
 
   sendSocketMessage('giveaway-info', currentGiveaway);
+  transmitLeaderInfo(true, true);
 }
 
 
@@ -411,7 +472,7 @@ function setupGiveawayHandler(db, app, bridge) {
     });
 
     socket.on('overlay-drag', async (data) => {
-    sendSocketMessage('overlay-moved', data);
+      sendSocketMessage('overlay-moved', data);
       await db.overlay.upsert({
         where: { name: data.name },
         create: { ...data },
@@ -441,6 +502,12 @@ async function updateGifterInfo(db, twitch, user, bits, subs) {
     console.log(`Giveaway: Rejecting update; giveaway is not running`);
     return;
   }
+
+  // We know that this is going to update some gifter information, so trigger an
+  // update for the data; it's going to happen after a delay, so it's OK for us
+  // to call this now, because the below code will finish running and capture
+  // the data before the update actually happens.
+  transmitLeaderInfo(bits !== 0, subs !== 0);
 
   // Get the record for this giveaway participant out of the cache
   let gifter = currentParticipants[user.userId];
