@@ -10,6 +10,10 @@ body {
   display: none !important;
 }
 
+.border {
+  outline: 2px dashed dodgerblue;
+}
+
 #viewport {
   position: relative;
   overflow: hidden;

@@ -63,12 +63,27 @@ function setupTextBox(authorized, username) {
  * tell the back end where the user decided the element that was dragged should
  * appear on the overlay. */
 function dragEnder(target, socket) {
+  target.classList.remove('border');
+
   const props = gsap.getProperty(target)
   socket.emit('overlay-drag', {
     name: target.id,
     x: props('x'),
     y: props('y')
-  })
+  });
+}
+
+
+// =============================================================================
+
+
+/* Given an overlay record that contains the name of an overlay and a positionm,
+ * try to find that overlay item and translate to the appropriate position. */
+function moveOverlay(overlay) {
+  const element = document.getElementById(overlay.name);
+  if (element !== null) {
+    element.style.transform = `translate3d(${overlay.x}px, ${overlay.y}px, 0px)`;
+  }
 }
 
 
@@ -92,10 +107,7 @@ async function setup() {
   // For all of the overlay elements that were loaded, look them up in the DOM
   // and, if found, set an appropriate transformation property upon them.
   config.overlays.forEach(overlay => {
-    const element = document.getElementById(overlay.name);
-    if (element !== null) {
-      element.style.transform = `translate3d(${overlay.x}px, ${overlay.y}px, 0px)`;
-    }
+    moveOverlay(overlay);
   });
 
   // Set up all of our draggable elements; this needs to happen after a short
@@ -105,17 +117,20 @@ async function setup() {
   window.setTimeout(() => {
     Draggable.create(countdownTxt, {
       bounds: document.getElementById('viewport'),
-      onDragEnd: function () { dragEnder(this.target, socket) }
+      onDragStart: function() { this.target.classList.add('border'); },
+      onDragEnd: function () { dragEnder(this.target, socket); }
     });
 
     Draggable.create(giftersSubsTct, {
       bounds: document.getElementById('viewport'),
-      onDragEnd: function () { dragEnder(this.target, socket) }
+      onDragStart: function() { this.target.classList.add('border'); },
+      onDragEnd: function () { dragEnder(this.target, socket); }
     });
 
     Draggable.create(giftersBitsTct, {
       bounds: document.getElementById('viewport'),
-      onDragEnd: function () { dragEnder(this.target, socket) }
+      onDragStart: function() { this.target.classList.add('border'); },
+      onDragEnd: function () { dragEnder(this.target, socket); }
     });
   }, 1000);
 
@@ -138,6 +153,14 @@ async function setup() {
     } else {
       countdownTxt.classList.remove('pause');
     }
+  });
+
+  // When we're told that an overlay moved, react to it. Currently this will
+  // foolishly update the overlay item that caused this event to trigger, but
+  // this sort of thing doesn't happen very frequently, so let's try not to
+  // stress about it.
+  socket.on('overlay-moved', data => {
+    moveOverlay(data);
   });
 
   // When the duration of the giveaway changes, update things.

@@ -411,6 +411,7 @@ function setupGiveawayHandler(db, app, bridge) {
     });
 
     socket.on('overlay-drag', async (data) => {
+    sendSocketMessage('overlay-moved', data);
       await db.overlay.upsert({
         where: { name: data.name },
         create: { ...data },
