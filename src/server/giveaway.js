@@ -308,7 +308,7 @@ async function resumeCurrentGiveaway(db, userId, autoPause) {
       endTime: null
     },
     orderBy: { startTime: 'desc' },
-    include: { Gifter: true },
+    include: { Gifter: { include: { gifter: true } } },
   });
 
   // This giveaway could be the current giveaway, but for that to be the case
@@ -455,6 +455,11 @@ async function updateGifterInfo(db, twitch, user, bits, subs) {
       userId: user.userId,
       bits,
       subs,
+      gifter: {
+        userId: user.userId,
+        userName: user.userName,
+        displayName: user.displayName
+      }
     }
 
     console.log(`Added gifter record: ${JSON.stringify(gifter)}`);
