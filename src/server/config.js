@@ -136,6 +136,24 @@ const config = convict({
       env: 'TWITCHLOYALTY_REWARD_TEXT',
       default: 'this would work better if this was configured properly'
     }
+  },
+
+  // When displaying leaderboards in the overlay for the people that have gifted
+  // subs and bits, this is the maximum number of people to display in the list,
+  // after sorting them based on their contributions.
+  leaderboard: {
+    bitsLeadersCount: {
+      doc: 'The number of gifters to show on the bit leaderboard',
+      format: 'nat',
+      env: 'TWITCHLOYALTY_LEADERBOARD_BITS',
+      default: 3
+    },
+    subsLeadersCount: {
+      doc: 'The number of gifters to show on the sub leaderboard',
+      format: 'nat',
+      env: 'TWITCHLOYALTY_LEADERBOARD_SUBS',
+      default: 3
+    }
   }
 });
 

@@ -46,6 +46,8 @@ async function launch() {
   app.get('/config', async (req, res) => {
     res.json({
       socketPort: config.get('server.socketPort'),
+      bitsLeadersCount: config.get('leaderboard.bitsLeadersCount'),
+      subsLeadersCount: config.get('leaderboard.subsLeadersCount'),
       overlays: await db.overlay.findMany({})
     });
   });
