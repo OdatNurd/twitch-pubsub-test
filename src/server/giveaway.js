@@ -101,7 +101,7 @@ function getMsgUser(msg) {
  *
  * This will debounce the transmission, so it's safe to invoke this as often as
  * you like. */
-function transmitLeaderInfo(bits, subs) {
+function transmitLeaderInfo(bits, subs, socket) {
   console.log(`transmitLeaderInfo(${bits}, ${subs})`);
 
   // Reduce the list of participants to a list of those that have the property
@@ -124,17 +124,33 @@ function transmitLeaderInfo(bits, subs) {
     update.sort((left, right) => right.score - left.score);
 
     console.dir(update);
-    sendSocketMessage(msg, update);
+    if (socket !== undefined) {
+      socket.emit(msg, update);
+    } else {
+      sendSocketMessage(msg, update);
+    }
   };
 
   if (subs === true) {
-    clearTimeout(subsUpdateId)
-    subsUpdateId = setTimeout(() => gatherUpdate('leaderboard-subs-update', "subs"), 1000);
+    const subUpdate = () => gatherUpdate('leaderboard-subs-update', "subs");
+
+    if (socket !== undefined) {
+      subUpdate();
+    } else {
+      clearTimeout(subsUpdateId)
+      subsUpdateId = setTimeout(() => subUpdate(), 1000);
+    }
   }
 
   if (bits === true) {
-    clearTimeout(bitsUpdateId)
-    bitsUpdateId = setTimeout(() => gatherUpdate('leaderboard-bits-update', "bits"), 1000);
+    const bitsUpdate = () => gatherUpdate('leaderboard-bits-update', "bits");
+
+    if (socket !== undefined) {
+      bitsUpdate();
+    } else {
+      clearTimeout(bitsUpdateId)
+      bitsUpdateId = setTimeout(() => bitsUpdate(), 1000);
+    }
   }
 }
 
@@ -470,6 +486,8 @@ function setupGiveawayHandler(db, app, bridge) {
       elapsedTime: currentGiveaway?.elapsedTime,
       paused: currentGiveaway?.paused,
     });
+
+    transmitLeaderInfo(true, true, socket);
 
     socket.on('overlay-drag', async (data) => {
       sendSocketMessage('overlay-moved', data);
