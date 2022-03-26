@@ -450,6 +450,10 @@ async function suspendCurrentGiveaway(db) {
   currentGiveaway.paused = true;
   await updateCurrentGiveaway(db)
 
+  // Make sure that if there's a timer running, we cancel it since this is going
+  // to stop the overlay.
+  clearTimeout(giveawayTimerID);
+
   // Terminate the current giveaway, and let interested parties know.
   currentGiveaway = undefined;
   currentParticipants = undefined;
