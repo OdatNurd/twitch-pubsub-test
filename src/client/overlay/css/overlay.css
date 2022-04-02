@@ -48,15 +48,16 @@ body {
 #gifters-subs {
   position: absolute;
   display:  inline-block;
-  /*border: 1px dashed red;*/
+/*  border: 1px dashed red;*/
+
+  min-width: 5em;
 
   font-family: 'Montserrat', sans-serif;
   font-size: 2em;
   color: white;
 
   padding: 0.5em;
-  /*opacity: 0;*/
-
+  opacity: 0;
 }
 
 #gifters-bits {
@@ -64,12 +65,40 @@ body {
   display:  inline-block;
   /*border: 1px dashed red;*/
 
+  min-width: 5em;
+
   font-family: 'Roboto', sans-serif;
   font-size: 2em;
   color: white;
 
   padding: 0.5em;
-  /*opacity: 0;*/
+  opacity: 0;
+}
+
+#gifters-subs h4 {
+  border-bottom: 1px solid white;
+  margin: 0.5em;
+}
+
+#gifters-bits h4 {
+  border-bottom: 1px solid white;
+  margin: 0.5em;
+}
+
+#gifters-subs .name {
+  color: lightgoldenrodyellow;
+}
+
+#gifters-subs .score {
+  color: dodgerblue;
+}
+
+#gifters-bits .name {
+  color: dodgerblue;
+}
+
+#gifters-bits .score {
+  color: lightgoldenrodyellow;
 }
 
 .pause {

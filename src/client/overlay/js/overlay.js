@@ -30,29 +30,18 @@ const humanize = require("humanize-duration").humanizer({
 
 /* The div that contains the current countdown text. */
 const countdownTxt = document.getElementById('countdown-clock');
-const giftersSubsTct = document.getElementById('gifters-subs');
-const giftersBitsTct = document.getElementById('gifters-bits');
+const gifterSubBox = document.getElementById('gifters-subs');
+const gifterBitsBox = document.getElementById('gifters-bits');
+
+const bitListBox = document.getElementById('bit-list');
+const subListBox = document.getElementById('sub-list');
+
+/* The DOM parser we use to turn our snippets of HTML into actual DOM nodes. */
+const domParser = new DOMParser();
 
 /* The status of the currently active giveaway (if any); this tracks things like
  * the duration and the elapsed time. */
 let currentGiveaway = undefined;
-
-
-// =============================================================================
-
-
-/* Update the text in the overlay that indicates who is currently authorized.
- *
- * This is just a placeholder until more interesting things are possible. */
-function setupTextBox(authorized, username) {
-  const text = document.getElementById('text');
-  if (authorized === true) {
-    text.classList.remove('hide');
-    text.innerText = `${username} has their account authorized for the overlay`;
-  } else {
-    text.classList.add('hide');
-  }
-}
 
 
 // =============================================================================
@@ -90,6 +79,23 @@ function moveOverlay(overlay) {
 // =============================================================================
 
 
+/* Update the leaderboard of the given type using the items provided; new items
+ * will be added to the element provides. */
+function updateLeaderboard(board, type, items) {
+  const bits = items.map((g, i) =>
+    domParser.parseFromString(
+      `<div id="${type}-${i+1}">
+        <span class="name">${g.name}</span>
+        (<span class="score">${g.score}</span>)
+      </div>`, 'text/html').querySelector('div'));
+
+  board.replaceChildren(...bits);
+}
+
+
+// =============================================================================
+
+
 /* Set up everything in the overlay. This initializes the state of everything,
  * ensures that we're connected to the back end socket server, and sets up the
  * appropriate handlers for knowing when key events occur. */
@@ -121,13 +127,13 @@ async function setup() {
       onDragEnd: function () { dragEnder(this.target, socket); }
     });
 
-    Draggable.create(giftersSubsTct, {
+    Draggable.create(gifterSubBox, {
       bounds: document.getElementById('viewport'),
       onDragStart: function() { this.target.classList.add('border'); },
       onDragEnd: function () { dragEnder(this.target, socket); }
     });
 
-    Draggable.create(giftersBitsTct, {
+    Draggable.create(gifterBitsBox, {
       bounds: document.getElementById('viewport'),
       onDragStart: function() { this.target.classList.add('border'); },
       onDragEnd: function () { dragEnder(this.target, socket); }
@@ -142,10 +148,14 @@ async function setup() {
 
     if (currentGiveaway !== undefined) {
       gsap.to(countdownTxt, { opacity: 1, duration: 1 });
+      gsap.to(gifterSubBox, { opacity: 1, duration: 1 });
+      gsap.to(gifterBitsBox, { opacity: 1, duration: 1 });
     }
 
     if (currentGiveaway === undefined) {
-      gsap.to(countdownTxt, { opacity: 0, duration: 1 })
+      gsap.to(countdownTxt, { opacity: 0, duration: 1 });
+      gsap.to(gifterSubBox, { opacity: 0, duration: 1 });
+      gsap.to(gifterBitsBox, { opacity: 0, duration: 1 });
     }
 
     if (data.paused) {
@@ -167,6 +177,14 @@ async function setup() {
   socket.on("giveaway-tick", data => {
     countdownTxt.innerText = `${humanize(data.duration - data.elapsedTime)} remaining`;
   });
+
+  // Update the bits leaderboard when a new message comes in.
+  socket.on('leaderboard-bits-update', data =>
+      updateLeaderboard(bitListBox, 'bits', data.splice(0, config.bitsLeadersCount)));
+
+  // Update the subs leaderboard when a new message comes in.
+  socket.on('leaderboard-subs-update', data =>
+      updateLeaderboard(subListBox, 'subs', data.splice(0, config.subsLeadersCount)));
 }
 
 
