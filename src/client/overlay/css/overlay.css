@@ -7,7 +7,7 @@ body {
 }
 
 .hide {
-  display: none !important;
+  opacity: 0 !important;
 }
 
 .border {

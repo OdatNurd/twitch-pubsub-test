@@ -6,6 +6,7 @@ const { getWebSocket } = require('../../common/js/websocket');
 
 import { gsap } from 'gsap';
 import { Draggable } from 'gsap/Draggable';
+import { Flip } from 'gsap/Flip';
 
 const humanize = require("humanize-duration").humanizer({
   language: "shortEn",
@@ -43,6 +44,10 @@ const domParser = new DOMParser();
  * the duration and the elapsed time. */
 let currentGiveaway = undefined;
 
+// The list of people that are on the bits leaderboard; when this is undefined,
+// there is not currently anyone in the bits list.
+let bitsLeaders = undefined;
+
 
 // =============================================================================
 
@@ -79,17 +84,109 @@ function moveOverlay(overlay) {
 // =============================================================================
 
 
+/* Create and return a new uniquely addressable div containing the information
+ * on the gifter provided. */
+function divForGifter(type, index, gifter) {
+  return domParser.parseFromString(
+    `<div id="${type}-${index+1}" style="position: relative;">
+      <span class="name">${gifter.name}</span>
+      (<span class="score">${gifter.score}</span>)
+    </div>`, 'text/html').querySelector('div');
+}
+
+
+// =============================================================================
+
+
 /* Update the leaderboard of the given type using the items provided; new items
  * will be added to the element provides. */
 function updateLeaderboard(board, type, items) {
-  const bits = items.map((g, i) =>
-    domParser.parseFromString(
-      `<div id="${type}-${i+1}">
-        <span class="name">${g.name}</span>
-        (<span class="score">${g.score}</span>)
-      </div>`, 'text/html').querySelector('div'));
+  console.log(`updateLeaderboard(${type})`);
+  // const bits = items.map((g, i) =>
+  //   domParser.parseFromString(
+  //     `<div id="${type}-${i+1}">
+  //       <span class="name">${g.name}</span>
+  //       (<span class="score">${g.score}</span>)
+  //     </div>`, 'text/html').querySelector('div'));
 
-  board.replaceChildren(...bits);
+  // board.replaceChildren(...bits);
+
+  // For now, only worry about bits; once this works for bits we can easily
+  // make it more generic for subs, since the containers are the same.
+  if (type !== 'bits') {
+    return;
+  }
+
+  // If we don't already have a leaderboard, then this might be setting one up.
+  if (bitsLeaders === undefined) {
+    // If the list we got is empty, then just leave; this is the back end giving
+    // us a courtesy update, but we don't need it here.
+    if (items.length === 0) {
+      return;
+    }
+
+    // Store this as the initial list of bits leaders.
+    bitsLeaders = items;
+
+    // Create a div for each of these items and then add them to the page.
+    const bits = items.map((g, i) => divForGifter(type, i, g));
+    board.replaceChildren(...bits);
+
+    // Bounce them in from the right, in a staggered fashion; the list is now
+    // visualized, we can leave.
+    gsap.from(bits, { opacity: 1, x: 1920, duration: .65, stagger: 0.05, ease: "elastic.out(2, 0.4)" });
+    return;
+  }
+
+  // The list is updating to new contents. Currently this assumes that the list
+  // always has the same people in it, for expediency in testing. In any case,
+  // save this new list of bits leaders so we know for next time.
+  bitsLeaders = items;
+
+  // If there is only 1 item in the list, there's not a lot of exciting fake
+  // animations that we need to run.
+  if (items.length < 1) {
+    return;
+  }
+
+  // TODO:
+  // If the number of items in the list is different, the new person won't show
+  // up; that's an artifact of our hacky testing here. This should of course
+  // take that into account.
+
+  // Save the current state of the children in this board; this gets us an object
+  // that contains the current position state.
+  const state = Flip.getState(board.children);
+  const firstIdx = 0;
+  const lastIdx = items.length - 1;
+
+  // Get the list of child nodes, and the top positions of the first and last
+  // items, then swap their tops so that they appear to change positions visibly.
+  const kids = board.children;
+  const t1 = kids[firstIdx].getBoundingClientRect().top;
+  const t2 = kids[lastIdx].getBoundingClientRect().top;
+  kids[firstIdx].style.top = t2 - t1;
+  kids[lastIdx].style.top = t1 - t2;
+
+  // Get GSap to animate the items from the saved state. This will apply offsets
+  // to the items as they currently exist to put them back where they started
+  // visibly, and then animate them to the position they're currently in.
+  Flip.from(state, {
+    duration: 1,
+    ease: "elastic.out(1.5, 2)",
+    // absolute: true,
+    onComplete: () => {
+      // When the animation is complete, reset the tops and swap the dom
+      // elements so they go into their native positions.
+      kids[firstIdx].style.top = 0;
+      kids[lastIdx].style.top = 0;
+
+      // Swap the dom element position now
+      board.replaceChildren(...Array.from(kids).reverse());
+    }
+  });
+
+  return;
 }
 
 
@@ -104,6 +201,7 @@ async function setup() {
   // it's otherwise masked and we don't want tree shaking to kick us in the
   // jimmies.
   gsap.registerPlugin(Draggable);
+  gsap.registerPlugin(Flip);
 
   // Get our configuration, and then use it to connect to the back end so that
   // we can communicate with it and get events.
@@ -145,6 +243,12 @@ async function setup() {
   socket.on("giveaway-info", data => {
     // Set up our current giveaway to track the incoming data.
     currentGiveaway = Object.keys(data).length === 0 ? undefined : data;
+    if (currentGiveaway === undefined) {
+      bitsLeaders = undefined;
+
+      bitListBox.innerHTML = 'Gift to take the lead!';
+      subListBox.innerHTML = 'Gift to take the lead!';
+    }
 
     if (currentGiveaway !== undefined) {
       gsap.to(countdownTxt, { opacity: 1, duration: 1 });
