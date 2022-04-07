@@ -88,7 +88,7 @@ function moveOverlay(overlay) {
  * on the gifter provided. */
 function divForGifter(type, index, gifter) {
   return domParser.parseFromString(
-    `<div id="${type}-${index+1}" style="position: relative;">
+    `<div id="${type}-${index+1}" data-twitch-id="${gifter.userId}" style="position: relative;">
       <span class="name">${gifter.name}</span>
       (<span class="score">${gifter.score}</span>)
     </div>`, 'text/html').querySelector('div');
@@ -149,6 +149,28 @@ function updateLeaderboard(board, type, items) {
     return;
   }
 
+  // Create a timeline onto which we can attach our tweens.
+  const timeline = gsap.timeline({ paused: true });
+
+  // For each item in the incoming list, look to see if they have a div that
+  // exists in the current page; if they do and their score is different than
+  // what is being provided in the update, do an animation that will alter the
+  // visible score.
+  items.forEach(g => {
+    // {userId: '66586458', name: 'odatnurd', score: 40}
+    const div = board.querySelector(`div[data-twitch-id="${g.userId}"]`);
+    if (div !== null) {
+      const score = div.querySelector('.score');
+      if (score !== null) {
+        if (parseInt(score.innerText, 10) !== g.score) {
+          score.innerText = g.score;
+          timeline.to(score, { blur: 5, duration: 0.2 }, 0)
+                  .to(score, { blur: 0, duration: 0.2 });
+        }
+      }
+    }
+  });
+
   // TODO:
   // If the number of items in the list is different, the new person won't show
   // up; that's an artifact of our hacky testing here. This should of course
@@ -171,7 +193,7 @@ function updateLeaderboard(board, type, items) {
   // Get GSap to animate the items from the saved state. This will apply offsets
   // to the items as they currently exist to put them back where they started
   // visibly, and then animate them to the position they're currently in.
-  Flip.from(state, {
+  timeline.add(Flip.from(state, {
     duration: 1,
     ease: "elastic.out(1.5, 2)",
     // absolute: true,
@@ -184,8 +206,9 @@ function updateLeaderboard(board, type, items) {
       // Swap the dom element position now
       board.replaceChildren(...Array.from(kids).reverse());
     }
-  });
+  }));
 
+  timeline.play();
   return;
 }
 
@@ -202,6 +225,43 @@ async function setup() {
   // jimmies.
   gsap.registerPlugin(Draggable);
   gsap.registerPlugin(Flip);
+
+  const blurProperty = gsap.utils.checkPrefix("filter"),
+          blurExp = /blur\((.+)?px\)/,
+          getBlurMatch = target => (gsap.getProperty(target, blurProperty) || "").match(blurExp) || [];
+
+  gsap.registerPlugin({
+      name: "blur",
+      get(target) {
+          return +(getBlurMatch(target)[1]) || 0;
+      },
+      init(target, endValue) {
+          let data = this,
+              filter = gsap.getProperty(target, blurProperty),
+              endBlur = "blur(" + endValue + "px)",
+              match = getBlurMatch(target)[0],
+              index;
+
+          if (filter === "none") {
+            filter = "";
+          }
+
+          if (match) {
+            index = filter.indexOf(match);
+            endValue = filter.substr(0, index) + endBlur + filter.substr(index + match.length);
+          } else {
+            endValue = filter + endBlur;
+            filter += filter ? " blur(0px)" : "blur(0px)";
+          }
+
+          data.target = target;
+          data.interp = gsap.utils.interpolate(filter, endValue);
+      },
+
+      render(progress, data) {
+          data.target.style[blurProperty] = data.interp(progress);
+      }
+  });
 
   // Get our configuration, and then use it to connect to the back end so that
   // we can communicate with it and get events.
