@@ -228,6 +228,20 @@
     tslib "^2.0.3"
     ws "^8.2.2"
 
+"@d-fischer/connection@^6.6.2":
+  version "6.6.2"
+  resolved "https://registry.yarnpkg.com/@d-fischer/connection/-/connection-6.6.2.tgz#4de63824ef08f9b8dd87cd78a9772f474be00ea0"
+  integrity sha512-lupWmQrsgcTUosf02kZK+Ygn3Q6HYisSGIwk3lxExOhmc+GJjwczyod8udC7nQJpwaFxebnBNSkqNGRMJBekSw==
+  dependencies:
+    "@d-fischer/isomorphic-ws" "^7.0.0"
+    "@d-fischer/logger" "^4.0.0"
+    "@d-fischer/shared-utils" "^3.0.1"
+    "@d-fischer/typed-event-emitter" "^3.2.2"
+    "@types/node" "^16.7.10"
+    "@types/ws" "^8.2.0"
+    tslib "^2.0.3"
+    ws "^8.2.2"
+
 "@d-fischer/cross-fetch@^4.0.2":
   version "4.0.2"
   resolved "https://registry.yarnpkg.com/@d-fischer/cross-fetch/-/cross-fetch-4.0.2.tgz#1a086c0066462fee196420748c283389c66fd5aa"
@@ -995,22 +1009,22 @@
     chrome-trace-event "^1.0.2"
     nullthrows "^1.1.1"
 
-"@prisma/client@^3.11.0":
-  version "3.11.0"
-  resolved "https://registry.yarnpkg.com/@prisma/client/-/client-3.11.0.tgz#6aa05165b641578c74816aaa15b389e0062318ee"
-  integrity sha512-d42o/tlalaWMmNOR4r5BiR6YYTYEV82eZ2lNKOm5ht3WyYwI9e+zy2MyZnNO4Fx5e08RAhW+GRVcEgKl5faUaQ==
+"@prisma/client@^3.12.0":
+  version "3.12.0"
+  resolved "https://registry.yarnpkg.com/@prisma/client/-/client-3.12.0.tgz#a0eb49ffea5c128dd11dffb896d7139a60073d12"
+  integrity sha512-4NEQjUcWja/NVBvfuDFscWSk1/rXg3+wj+TSkqXCb1tKlx/bsUE00rxsvOvGg7VZ6lw1JFpGkwjwmsOIc4zvQw==
   dependencies:
-    "@prisma/engines-version" "3.11.0-48.b371888aaf8f51357c7457d836b86d12da91658b"
+    "@prisma/engines-version" "3.12.0-37.22b822189f46ef0dc5c5b503368d1bee01213980"
 
-"@prisma/engines-version@3.11.0-48.b371888aaf8f51357c7457d836b86d12da91658b":
-  version "3.11.0-48.b371888aaf8f51357c7457d836b86d12da91658b"
-  resolved "https://registry.yarnpkg.com/@prisma/engines-version/-/engines-version-3.11.0-48.b371888aaf8f51357c7457d836b86d12da91658b.tgz#808ab9636184e4a0b2bf79016d6ed72c4a1ed54f"
-  integrity sha512-bhMW1XybXZyqCf+9QqjP7Oi7xgVHcISVyOZNMm51qeZsy12M1RtHaCcXUFeMMV0JOCZZuPFVr3+0KVpQqK35CQ==
+"@prisma/engines-version@3.12.0-37.22b822189f46ef0dc5c5b503368d1bee01213980":
+  version "3.12.0-37.22b822189f46ef0dc5c5b503368d1bee01213980"
+  resolved "https://registry.yarnpkg.com/@prisma/engines-version/-/engines-version-3.12.0-37.22b822189f46ef0dc5c5b503368d1bee01213980.tgz#829ca3d9d0d92555f44644606d4edfd45b2f5886"
+  integrity sha512-o+jo8d7ZEiVpcpNWUDh3fj2uPQpBxl79XE9ih9nkogJbhw6P33274SHnqheedZ7PyvPIK/mvU8MLNYgetgXPYw==
 
-"@prisma/engines@3.11.0-48.b371888aaf8f51357c7457d836b86d12da91658b":
-  version "3.11.0-48.b371888aaf8f51357c7457d836b86d12da91658b"
-  resolved "https://registry.yarnpkg.com/@prisma/engines/-/engines-3.11.0-48.b371888aaf8f51357c7457d836b86d12da91658b.tgz#4c1093f7b24c433a9cef2e60f13f57f7c89b5cfa"
-  integrity sha512-m9iZd5F5vP6A2IvKWfHpOO/qK8OOO9nbsV/pdyEkF/1WNe0E8SIWFBKb+HcMLkG9OFbDDBy8QItXmp/mIULuwQ==
+"@prisma/engines@3.12.0-37.22b822189f46ef0dc5c5b503368d1bee01213980":
+  version "3.12.0-37.22b822189f46ef0dc5c5b503368d1bee01213980"
+  resolved "https://registry.yarnpkg.com/@prisma/engines/-/engines-3.12.0-37.22b822189f46ef0dc5c5b503368d1bee01213980.tgz#e52e364084c4d05278f62768047b788665e64a45"
+  integrity sha512-zULjkN8yhzS7B3yeEz4aIym4E2w1ChrV12i14pht3ePFufvsAvBSoZ+tuXMvfSoNTgBS5E4bolRzLbMmbwkkMQ==
 
 "@swc/helpers@^0.2.11":
   version "0.2.14"
@@ -1022,45 +1036,45 @@
   resolved "https://registry.yarnpkg.com/@trysound/sax/-/sax-0.2.0.tgz#cccaab758af56761eb7bf37af6f03f326dd798ad"
   integrity sha512-L7z9BgrNEcYyUYtF+HaEfiS5ebkh9jXqbszz7pC0hRBPaatV0XjSD3+eHrpqFemQfgwiFF0QPIarnIihIDn7OA==
 
-"@twurple/api-call@^5.0.13":
-  version "5.0.13"
-  resolved "https://registry.yarnpkg.com/@twurple/api-call/-/api-call-5.0.13.tgz#e76bdb17c8eab90cfa006d7a6f78f804a49875ab"
-  integrity sha512-VBjax2j5ps1XWQWTqvedd8n0dcSLatBS5kTJjDjQI+aQbrJNo6QN9FBwBVs2o0UYNx9Sm6UvF+vGdO0oikwZuQ==
+"@twurple/api-call@^5.0.18":
+  version "5.0.18"
+  resolved "https://registry.yarnpkg.com/@twurple/api-call/-/api-call-5.0.18.tgz#ced8c16cafe7254bb597c9fa790d46b23a0fafb2"
+  integrity sha512-OTCuGdCOXo1CmpKJ2qKQ6Yn02I3GlRJ8M2pl41WdQgMEQUYO1dqrAik14f5GXwKmGYh1XFsEJKn66IP93gLehA==
   dependencies:
     "@d-fischer/cross-fetch" "^4.0.2"
     "@d-fischer/qs" "^7.0.2"
-    "@twurple/common" "^5.0.13"
+    "@twurple/common" "^5.0.18"
     "@types/node-fetch" "^2.5.7"
     tslib "^2.0.3"
 
-"@twurple/api@^5.0.13":
-  version "5.0.13"
-  resolved "https://registry.yarnpkg.com/@twurple/api/-/api-5.0.13.tgz#6ad4a7bbc239edd8c3e4cfc280ae752abfbe49b9"
-  integrity sha512-T3akhs5O+tUMK0fSKnLl5g+uGxCSH6rI6Vh49WPGMR9UDqtdXVmmfvemstlUQNDM8cuGQpGQjDXOpAhozBIPhA==
+"@twurple/api@^5.0.18":
+  version "5.0.18"
+  resolved "https://registry.yarnpkg.com/@twurple/api/-/api-5.0.18.tgz#f7c414f7a507e2861ac5764019830c53c84602d8"
+  integrity sha512-ubf00qA6t+Az//zl4vFmOKR+axqwwmS9pIrHwUAS5jTqNlvVfxO73jtnRnoM45K4zHjt6yQvVZnum/uFUNM8yw==
   dependencies:
     "@d-fischer/cache-decorators" "^3.0.0"
     "@d-fischer/logger" "^4.0.0"
     "@d-fischer/rate-limiter" "^0.4.4"
     "@d-fischer/shared-utils" "^3.2.0"
-    "@twurple/api-call" "^5.0.13"
-    "@twurple/common" "^5.0.13"
+    "@twurple/api-call" "^5.0.18"
+    "@twurple/common" "^5.0.18"
     tslib "^2.0.3"
 
-"@twurple/auth@^5.0.13":
-  version "5.0.13"
-  resolved "https://registry.yarnpkg.com/@twurple/auth/-/auth-5.0.13.tgz#ac1cc0493b61527b2f564032daf2a9cd04b84e05"
-  integrity sha512-bx5OzMxSUHf039GZwwpZM4K5sAA+LKT7AvjvcpL1V4ATjtpunabMuvNQJnmXTUhI4w2Y7bLEwoWaAcMUYrNvmQ==
+"@twurple/auth@^5.0.18":
+  version "5.0.18"
+  resolved "https://registry.yarnpkg.com/@twurple/auth/-/auth-5.0.18.tgz#a0775c266b7fc74b63e974b78bbaa06df5847eec"
+  integrity sha512-ktwwGmmXWTu3JmTZCweuH/NntzFNtC96+c5setbPb12h/q7HjCJxdvmBbGFbUgipFnZ9Z7iQGS2s5WPwK2IAsA==
   dependencies:
     "@d-fischer/logger" "^4.0.0"
     "@d-fischer/shared-utils" "^3.2.0"
-    "@twurple/api-call" "^5.0.13"
-    "@twurple/common" "^5.0.13"
+    "@twurple/api-call" "^5.0.18"
+    "@twurple/common" "^5.0.18"
     tslib "^2.0.3"
 
-"@twurple/chat@^5.0.13":
-  version "5.0.14"
-  resolved "https://registry.yarnpkg.com/@twurple/chat/-/chat-5.0.14.tgz#1ca2899f571ed6d31085b364487e4200ab46aa8f"
-  integrity sha512-v13QQS7RkAWXW7DUB437DBEk6guEJD8/kLR9CLlKEAAAOk8ZB14JTZbjkLQoC6GzOTFxaZMyBYsWJq8gyY+H/Q==
+"@twurple/chat@^5.0.18":
+  version "5.0.18"
+  resolved "https://registry.yarnpkg.com/@twurple/chat/-/chat-5.0.18.tgz#810e5394d9c5ecb937dce5bb54eb3c4cbfd188db"
+  integrity sha512-kgHOXoKiM+8TRxX9GAuv1yWYMDVeOMUNS5nwuIV/gd0aWnNfFSIUJKcDu+FHevSDj4IodJq4rNx/oPiotPOFhQ==
   dependencies:
     "@d-fischer/cache-decorators" "^3.0.0"
     "@d-fischer/deprecate" "^2.0.2"
@@ -1068,38 +1082,29 @@
     "@d-fischer/rate-limiter" "^0.4.4"
     "@d-fischer/shared-utils" "^3.2.0"
     "@d-fischer/typed-event-emitter" "^3.2.2"
-    "@twurple/common" "^5.0.14"
+    "@twurple/common" "^5.0.18"
     ircv3 "^0.28.0"
     tslib "^2.0.3"
 
-"@twurple/common@^5.0.13":
-  version "5.0.13"
-  resolved "https://registry.yarnpkg.com/@twurple/common/-/common-5.0.13.tgz#92e148e2210cb28204cde6633b3a9668d033eff2"
-  integrity sha512-IOFqM9eB4bzGK3mCXqz3efBykn1m7ushs1DfFn9z/QhLROgRZna1MmZickfRmFvdF17E1Zy1w6o4gtSNxVyIyQ==
+"@twurple/common@^5.0.18":
+  version "5.0.18"
+  resolved "https://registry.yarnpkg.com/@twurple/common/-/common-5.0.18.tgz#28242777dac1ccad0f96451a76713a10d838728e"
+  integrity sha512-pyC1OOOqR4yAUPzgq1DwLyV1SAvVFeUPCgUIY03WtvIoJYL17I1JUNEYFnrBViXTQtjH6ucXprnOR2aQEKghSQ==
   dependencies:
     "@d-fischer/shared-utils" "^3.2.0"
     klona "^2.0.4"
     tslib "^2.0.3"
 
-"@twurple/common@^5.0.14":
-  version "5.0.14"
-  resolved "https://registry.yarnpkg.com/@twurple/common/-/common-5.0.14.tgz#6d10e5e06748cb6d09af2929288fee7fcfe1adc2"
-  integrity sha512-Sp6HfUisgKpHXZTtXu7i4ym6jCFJFfIH0Y5ziR9nFRThChJniivPEbrNmsmtBVTSD7TMzpOqBY3JO7cBLxBs6g==
+"@twurple/pubsub@^5.0.18":
+  version "5.0.18"
+  resolved "https://registry.yarnpkg.com/@twurple/pubsub/-/pubsub-5.0.18.tgz#66b1edd09694c31c4afb1e88f6ee8e9a3ecfb03f"
+  integrity sha512-DGAZNyjTXd0EbFbIa8xwI+DM26cUK0o/zjqCttShMcK6oKyb6rnZcaFbOvKzOZXgGqKGYlSC1miRIZdK65q9WA==
   dependencies:
-    "@d-fischer/shared-utils" "^3.2.0"
-    klona "^2.0.4"
-    tslib "^2.0.3"
-
-"@twurple/pubsub@^5.0.13":
-  version "5.0.13"
-  resolved "https://registry.yarnpkg.com/@twurple/pubsub/-/pubsub-5.0.13.tgz#291fb9beeee7a1849cbddb9babf7c4465040ee99"
-  integrity sha512-xeEQlxIRDEQsxNUw0mhFXLPiTVbXJAaQtvbN5glb+plaUPZCSqE/th+6paGuY8DLuErBaylwFSZL4fiVEqL6GA==
-  dependencies:
-    "@d-fischer/connection" "^6.6.0"
+    "@d-fischer/connection" "^6.6.2"
     "@d-fischer/logger" "^4.0.0"
     "@d-fischer/shared-utils" "^3.2.0"
     "@d-fischer/typed-event-emitter" "^3.2.2"
-    "@twurple/common" "^5.0.13"
+    "@twurple/common" "^5.0.18"
     tslib "^2.0.3"
 
 "@types/http-proxy@^1.17.5":
@@ -4418,12 +4423,12 @@ prelude-ls@~1.1.2:
   resolved "https://registry.yarnpkg.com/prelude-ls/-/prelude-ls-1.1.2.tgz#21932a549f5e52ffd9a827f570e04be62a97da54"
   integrity sha1-IZMqVJ9eUv/ZqCf1cOBL5iqX2lQ=
 
-prisma@^3.11.0:
-  version "3.11.0"
-  resolved "https://registry.yarnpkg.com/prisma/-/prisma-3.11.0.tgz#0e384e9d36785711b579fda60117a2d41f79c72c"
-  integrity sha512-8SdsLPhKR3mOfoo2o73h9mNn3v5kA/RqGA26Sv6qDS78Eh2uepPqt5e8/nwj5EOblYm5HEGuitaXQrOCLb6uTw==
+prisma@^3.12.0:
+  version "3.12.0"
+  resolved "https://registry.yarnpkg.com/prisma/-/prisma-3.12.0.tgz#9675e0e72407122759d3eadcb6d27cdccd3497bd"
+  integrity sha512-ltCMZAx1i0i9xuPM692Srj8McC665h6E5RqJom999sjtVSccHSD8Z+HSdBN2183h9PJKvC5dapkn78dd0NWMBg==
   dependencies:
-    "@prisma/engines" "3.11.0-48.b371888aaf8f51357c7457d836b86d12da91658b"
+    "@prisma/engines" "3.12.0-37.22b822189f46ef0dc5c5b503368d1bee01213980"
 
 process-nextick-args@~2.0.0:
   version "2.0.1"
