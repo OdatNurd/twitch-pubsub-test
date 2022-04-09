@@ -103,6 +103,31 @@ function divForGifter(gifter) {
 // =============================================================================
 
 
+/* Given a div element that represents a leaderboard, check the contents of the
+ * leaderboard entries (assumed to be in the first child div) to see which is
+ * the longest, and then size the header element (assumed to be the first child
+ * H4 tag) to be that wide.
+ *
+ * If the header or the child div is not present, then this silently does
+ * nothing so as to not destroy the DOM or trigger errors. */
+function resizeGifterHeader(boxElement) {
+  const contents = boxElement.querySelector('div');
+  const header = boxElement.querySelector('h4');
+
+  if (contents !== null && header !== null) {
+    const maxWidth = Array.from(contents.children).reduce((prev, cur) => {
+      const width = cur.getBoundingClientRect().width;
+      return (width > prev) ? width : prev;
+    }, 0);
+
+    header.style.width = `${maxWidth}px`;
+  }
+}
+
+
+// =============================================================================
+
+
 /* Update the leaderboard of the given type using the items provided; new items
  * will be added to the element provides. */
 function updateLeaderboard(board, type, items) {
@@ -260,9 +285,12 @@ async function setup() {
   });
 
   // Make sure that the content in the page has a placeholder starter item for
-  // each of the two leader boxes.
+  // each of the two leader boxes, then size the headers so that they align with
+  // the placeholder.
   bitListBox.innerHTML = placeholderHtml;
   subListBox.innerHTML = placeholderHtml;
+  resizeGifterHeader(gifterBitsBox);
+  resizeGifterHeader(gifterSubBox);
 
   // Get our configuration, and then use it to connect to the back end so that
   // we can communicate with it and get events.
@@ -309,6 +337,8 @@ async function setup() {
 
       bitListBox.innerHTML = placeholderHtml;
       subListBox.innerHTML = placeholderHtml;
+      resizeGifterHeader(gifterBitsBox);
+      resizeGifterHeader(gifterSubBox);
     }
 
     if (currentGiveaway !== undefined) {
