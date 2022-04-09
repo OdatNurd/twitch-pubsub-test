@@ -44,9 +44,14 @@ const domParser = new DOMParser();
  * the duration and the elapsed time. */
 let currentGiveaway = undefined;
 
-// The list of people that are on the bits leaderboard; when this is undefined,
-// there is not currently anyone in the bits list.
+/* The list of people that are on the bits leaderboard; when this is undefined,
+ * there is not currently anyone in the bits list. */
 let bitsLeaders = undefined;
+
+/* This HTML is used to specify the default entry in a gifter box when it's
+ * empty, so that people know they should gift. This also allows us to pick up
+ * the dimensions of an item in the list. */
+const placeholderHtml = `<div class="gift-box border">Gift now to take the lead!</div>`;
 
 
 // =============================================================================
@@ -254,6 +259,11 @@ async function setup() {
       }
   });
 
+  // Make sure that the content in the page has a placeholder starter item for
+  // each of the two leader boxes.
+  bitListBox.innerHTML = placeholderHtml;
+  subListBox.innerHTML = placeholderHtml;
+
   // Get our configuration, and then use it to connect to the back end so that
   // we can communicate with it and get events.
   const config = await getConfig();
@@ -297,8 +307,8 @@ async function setup() {
     if (currentGiveaway === undefined) {
       bitsLeaders = undefined;
 
-      bitListBox.innerHTML = 'Gift to take the lead!';
-      subListBox.innerHTML = 'Gift to take the lead!';
+      bitListBox.innerHTML = placeholderHtml;
+      subListBox.innerHTML = placeholderHtml;
     }
 
     if (currentGiveaway !== undefined) {
