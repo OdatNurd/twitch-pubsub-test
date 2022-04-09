@@ -347,26 +347,14 @@ function setupGiftBoxes() {
 // =============================================================================
 
 
-/* Set up everything in the overlay. This initializes the state of everything,
- * ensures that we're connected to the back end socket server, and sets up the
- * appropriate handlers for knowing when key events occur. */
-async function setup() {
-  // Set up all of the global gsap operations.
-  setupGsap();
-
-  // Do the initial setup on the gift boxes, which puts in placeholders for
-  // the empty items and captures their dimensions for use in later animation
-  // positioning.
-  setupGiftBoxes();
-
-  // Get our configuration, and then use it to connect to the back end so that
-  // we can communicate with it and get events.
-  const config = await getConfig();
-  const socket = getWebSocket(location.hostname, config.socketPort);
-
+/* Given a list of database records for elements in the page that represent our
+ * overlays, position those elements on the page and set them up for a drag/drop
+ * operation that will cause an update on the new position to be broadcast back
+ * to the back end server. */
+function setupOverlays(overlays, socket) {
   // For all of the overlay elements that were loaded, look them up in the DOM
   // and, if found, set an appropriate transformation property upon them.
-  config.overlays.forEach(overlay => {
+  overlays.forEach(overlay => {
     moveOverlay(overlay);
   });
 
@@ -393,6 +381,30 @@ async function setup() {
       onDragEnd: function () { dragEnder(this.target, socket); }
     });
   }, 1000);
+
+}
+
+/* Set up everything in the overlay. This initializes the state of everything,
+ * ensures that we're connected to the back end socket server, and sets up the
+ * appropriate handlers for knowing when key events occur. */
+async function setup() {
+  // Set up all of the global gsap operations.
+  setupGsap();
+
+  // Do the initial setup on the gift boxes, which puts in placeholders for
+  // the empty items and captures their dimensions for use in later animation
+  // positioning.
+  setupGiftBoxes();
+
+  // Get our configuration, and then use it to connect to the back end so that
+  // we can communicate with it and get events.
+  const config = await getConfig();
+  const socket = getWebSocket(location.hostname, config.socketPort);
+
+  // Using the configuration information on overlays ansd their positions, move
+  // them into the appropriate place, and set up the drag/drop on their
+  // components.
+  setupOverlays(config.overlays, socket);
 
   // When the information on the current giveaway changes, take an action; this
   // triggers when  a new giveaway starts, one ends, or the pause state changes.
