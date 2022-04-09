@@ -170,26 +170,77 @@ function updateLeaderboard(board, type, items) {
     return;
   }
 
-  // If we don't already have a leaderboard, then this might be setting one up.
+  // Special case: The very first update we get on this leaderboard for which
+  // there are any items, we can just create new divs specifically for those
+  // users, in their order on the leaderboard, and then manually animate them
+  // into position.
   if (bitsLeaders === undefined) {
-    // If the list we got is empty, then just leave; this is the back end giving
-    // us a courtesy update, but we don't need it here.
+    // When we get an update that's empty and we don't already know about a
+    // list, of gifters, this is a courtesy update; we can ignore it as it has
+    // no direct bearing on us.
     if (items.length === 0) {
       return;
     }
 
-    // Store this as the initial list of bits leaders.
+    // Store this as the initial list of bits leaders for the next run through.
     bitsLeaders = items;
 
-    // Create a div for each of these items and then add them to the page.
-    const bits = items.map((g, i) => divForGifter(g));
+    // Create a div for each of these items and then add them to the page in
+    // their sorted order.
+    const bits = items.map((gifter, idx) => {
+      const div = divForGifter(gifter);
+      div.style.top = idx * bitListDim.height + bitListDim.top;
+      return div;
+    });
     board.replaceChildren(...bits);
+
+    // We changed the children in ths box, so we need to update the title.
+    resizeGifterHeader(gifterBitsBox);
 
     // Bounce them in from the right, in a staggered fashion; the list is now
     // visualized, we can leave.
     gsap.from(bits, { opacity: 1, x: 1920, duration: .65, stagger: 0.05, ease: "elastic.out(2, 0.4)" });
     return;
   }
+
+  // We previously had a list of users in the leaderboard, and now we're getting
+  // a whole new update.
+  //
+  // This can potentially generate any number of animations that we need to run
+  // in sequence, so start by making a timeline to contain them all. We'll start
+  // it out paused so that we can build everything up before we start it
+  // running.
+  const timeline = gsap.timeline({ paused: true });
+
+  // Scan over the new items; for any user that appears in the leaderboard
+  // already that has a gift score for this board that's different than the
+  // previous one, animate the number changing as a first step.
+  items.forEach(g => {
+    // Look for a div that represents this particular user
+    const div = board.querySelector(`div[data-twitch-id="${g.userId}"]`);
+    if (div !== null) {
+      // If we can pull the score and it's different than it was previously,
+      // add an animation for it to blur out and back in .
+      const score = div.querySelector('.score');
+      if (score !== null) {
+        if (parseInt(score.innerText, 10) !== g.score) {
+          const tl = gsap.timeline({ defaults: { duration: 0.2 }})
+            .to(score, { blur: 5, scale: 2.5, onComplete: () => score.innerText = g.score })
+            .to(score, { blur: 0, scale: 1 });
+
+          timeline.add(tl, 0);
+        }
+      }
+    }
+  });
+
+  // Start the timeline playing now
+  timeline.play();
+  return;
+
+  /* ============================================================== */
+  /* Below here,  it's all pooptown, population us                  */
+  /* ============================================================== */
 
   // The list is updating to new contents. Currently this assumes that the list
   // always has the same people in it, for expediency in testing. In any case,
@@ -203,26 +254,7 @@ function updateLeaderboard(board, type, items) {
   }
 
   // Create a timeline onto which we can attach our tweens.
-  const timeline = gsap.timeline({ paused: true });
 
-  // For each item in the incoming list, look to see if they have a div that
-  // exists in the current page; if they do and their score is different than
-  // what is being provided in the update, do an animation that will alter the
-  // visible score.
-  items.forEach(g => {
-    // {userId: '66586458', name: 'odatnurd', score: 40}
-    const div = board.querySelector(`div[data-twitch-id="${g.userId}"]`);
-    if (div !== null) {
-      const score = div.querySelector('.score');
-      if (score !== null) {
-        if (parseInt(score.innerText, 10) !== g.score) {
-          score.innerText = g.score;
-          timeline.to(score, { blur: 5, duration: 0.2 }, 0)
-                  .to(score, { blur: 0, duration: 0.2 });
-        }
-      }
-    }
-  });
 
   // TODO:
   // If the number of items in the list is different, the new person won't show
