@@ -86,9 +86,9 @@ function moveOverlay(overlay) {
 
 /* Create and return a new uniquely addressable div containing the information
  * on the gifter provided. */
-function divForGifter(type, index, gifter) {
+function divForGifter(gifter) {
   return domParser.parseFromString(
-    `<div id="${type}-${index+1}" data-twitch-id="${gifter.userId}" style="position: relative;">
+    `<div class="gift-box border" data-twitch-id="${gifter.userId}">
       <span class="name">${gifter.name}</span>
       (<span class="score">${gifter.score}</span>)
     </div>`, 'text/html').querySelector('div');
@@ -102,15 +102,6 @@ function divForGifter(type, index, gifter) {
  * will be added to the element provides. */
 function updateLeaderboard(board, type, items) {
   console.log(`updateLeaderboard(${type})`);
-  // const bits = items.map((g, i) =>
-  //   domParser.parseFromString(
-  //     `<div id="${type}-${i+1}">
-  //       <span class="name">${g.name}</span>
-  //       (<span class="score">${g.score}</span>)
-  //     </div>`, 'text/html').querySelector('div'));
-
-  // board.replaceChildren(...bits);
-
   // For now, only worry about bits; once this works for bits we can easily
   // make it more generic for subs, since the containers are the same.
   if (type !== 'bits') {
@@ -129,7 +120,7 @@ function updateLeaderboard(board, type, items) {
     bitsLeaders = items;
 
     // Create a div for each of these items and then add them to the page.
-    const bits = items.map((g, i) => divForGifter(type, i, g));
+    const bits = items.map((g, i) => divForGifter(g));
     board.replaceChildren(...bits);
 
     // Bounce them in from the right, in a staggered fashion; the list is now
