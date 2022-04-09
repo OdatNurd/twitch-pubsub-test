@@ -269,10 +269,12 @@ function updateLeaderboard(board, type, items) {
 // =============================================================================
 
 
-/* Set up everything in the overlay. This initializes the state of everything,
- * ensures that we're connected to the back end socket server, and sets up the
- * appropriate handlers for knowing when key events occur. */
-async function setup() {
+/* Set up the global GSAP options that we need in order to get our animations
+ * and other poritions of things working.
+ *
+ * This includes registering libraries, registering animation plugins, and so
+ * on. */
+function setupGsap() {
   // Make sure that bundlers know that we're actually using this object, since
   // it's otherwise masked and we don't want tree shaking to kick us in the
   // jimmies.
@@ -315,6 +317,19 @@ async function setup() {
           data.target.style[blurProperty] = data.interp(progress);
       }
   });
+
+}
+
+
+// =============================================================================
+
+
+/* Set up everything in the overlay. This initializes the state of everything,
+ * ensures that we're connected to the back end socket server, and sets up the
+ * appropriate handlers for knowing when key events occur. */
+async function setup() {
+  // Set up all of the global gsap operations.
+  setupGsap();
 
   // Make sure that the content in the page has a placeholder starter item for
   // each of the two leader boxes, then size the headers so that they align with
