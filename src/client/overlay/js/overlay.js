@@ -31,11 +31,26 @@ const humanize = require("humanize-duration").humanizer({
 
 /* The div that contains the current countdown text. */
 const countdownTxt = document.getElementById('countdown-clock');
+
+/* The overall divs that contain the leaderboards for subs and bits; these
+ * elements contain the header as well as the container divs that ultimately
+ * contain the gifter boxes. */
 const gifterSubBox = document.getElementById('gifters-subs');
 const gifterBitsBox = document.getElementById('gifters-bits');
 
-const bitListBox = document.getElementById('bit-list');
+/* The divs that contain the actual list of subs and bits leaders in each of the
+ * boards. This is an aliased element lookup from the main gifter boxes. */
 const subListBox = document.getElementById('sub-list');
+const bitListBox = document.getElementById('bit-list');
+
+/* When we need to animate items in and out of one of the leaderboards, we need
+ * to know a specific position to which the element should go in order to get
+ * the positioning we need.
+ *
+ * These items, gathered at startup, are DomRect instances that represent the
+ * dimensions of the placeholder item that is added to each list at startup. */
+let subListDim = undefined;
+let bitListDim = undefined;
 
 /* The DOM parser we use to turn our snippets of HTML into actual DOM nodes. */
 const domParser = new DOMParser();
@@ -122,6 +137,23 @@ function resizeGifterHeader(boxElement) {
 
     header.style.width = `${maxWidth}px`;
   }
+}
+
+
+// =============================================================================
+
+
+/* Given a box element that has at least one gift-box element in it, capture
+ * and return back a DomRect that represents the dimensions of that element
+ * so that it can be used to position other elements. */
+function getGiftElementSize(boxElement) {
+  const box = boxElement.querySelector('div.gift-box');
+  if (box === null) {
+    console.error('Unable to find gift box; cannot get element size');
+    return null
+  }
+
+  return box.getBoundingClientRect();
 }
 
 
@@ -287,10 +319,16 @@ async function setup() {
   // Make sure that the content in the page has a placeholder starter item for
   // each of the two leader boxes, then size the headers so that they align with
   // the placeholder.
-  bitListBox.innerHTML = placeholderHtml;
   subListBox.innerHTML = placeholderHtml;
-  resizeGifterHeader(gifterBitsBox);
+  bitListBox.innerHTML = placeholderHtml;
   resizeGifterHeader(gifterSubBox);
+  resizeGifterHeader(gifterBitsBox);
+
+  // Capture the dimensions of the gift boxes that we just added, so that as we
+  // need to generate animations we can position them the same as they will
+  // position themselves natively in the DOM.
+  subListDim = getGiftElementSize(gifterSubBox);
+  bitListDim = getGiftElementSize(gifterBitsBox);
 
   // Get our configuration, and then use it to connect to the back end so that
   // we can communicate with it and get events.
