@@ -56,7 +56,6 @@ body {
   font-size: 2em;
   color: white;
 
-  padding: 0.5em;
   opacity: 0;
 }
 
@@ -71,18 +70,24 @@ body {
   font-size: 2em;
   color: white;
 
-  padding: 0.5em;
   opacity: 0;
+}
+
+.gift-box {
+  position: absolute;
+  height: 1.5em;
+  white-space: nowrap;
+  left: 0;
 }
 
 #gifters-subs h4 {
   border-bottom: 1px solid white;
-  margin: 0.5em;
+  margin: 0px 0px 16px 0px;
 }
 
 #gifters-bits h4 {
   border-bottom: 1px solid white;
-  margin: 0.5em;
+  margin: 0px 0px 16px 0px;
 }
 
 #gifters-subs .name {
@@ -91,6 +96,7 @@ body {
 
 #gifters-subs .score {
   color: dodgerblue;
+  display: inline-block;
 }
 
 #gifters-bits .name {
@@ -99,6 +105,7 @@ body {
 
 #gifters-bits .score {
   color: lightgoldenrodyellow;
+  display: inline-block;
 }
 
 .pause {
