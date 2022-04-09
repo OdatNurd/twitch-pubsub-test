@@ -324,13 +324,10 @@ function setupGsap() {
 // =============================================================================
 
 
-/* Set up everything in the overlay. This initializes the state of everything,
- * ensures that we're connected to the back end socket server, and sets up the
- * appropriate handlers for knowing when key events occur. */
-async function setup() {
-  // Set up all of the global gsap operations.
-  setupGsap();
-
+/* Set up the initial state of the gift boxes by putting placeholders in them
+ * and making sure that we know the sizes of those placeholders for later
+ * animations. */
+function setupGiftBoxes() {
   // Make sure that the content in the page has a placeholder starter item for
   // each of the two leader boxes, then size the headers so that they align with
   // the placeholder.
@@ -344,6 +341,23 @@ async function setup() {
   // position themselves natively in the DOM.
   subListDim = getGiftElementSize(gifterSubBox);
   bitListDim = getGiftElementSize(gifterBitsBox);
+}
+
+
+// =============================================================================
+
+
+/* Set up everything in the overlay. This initializes the state of everything,
+ * ensures that we're connected to the back end socket server, and sets up the
+ * appropriate handlers for knowing when key events occur. */
+async function setup() {
+  // Set up all of the global gsap operations.
+  setupGsap();
+
+  // Do the initial setup on the gift boxes, which puts in placeholders for
+  // the empty items and captures their dimensions for use in later animation
+  // positioning.
+  setupGiftBoxes();
 
   // Get our configuration, and then use it to connect to the back end so that
   // we can communicate with it and get events.
