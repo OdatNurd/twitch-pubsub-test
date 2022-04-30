@@ -1,6 +1,8 @@
 // =============================================================================
 
 
+const { config } = require('./config');
+
 const { ChatClient } = require('@twurple/chat');
 
 
@@ -75,7 +77,9 @@ async function enterTwitchChat(twitch) {
     // what name we're known by. Once that happens, this event triggers.
     chat.client.onRegister(() => {
       console.log(`Registered with Twitch chat as ${chat.client.currentNick}`);
-      chatSay('Good news everyone, I have arrived!')
+      if (config.get('chat.announcements') === true) {
+        chatSay('Good news everyone, I have arrived!')
+      }
     }),
 
     // Handle cases where sending messages fails due to being rate limited or
@@ -102,7 +106,10 @@ async function leaveTwitchChat() {
     return;
   }
 
-  await chatDo('peaces out');
+  if (config.get('chat.announcements') === true) {
+    await chatDo('peaces out');
+  }
+
 
   // Actively leave the chat, and then remove all of of the listeners that are
   // associated with it so that we can remove the instance; otherwise they will

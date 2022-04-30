@@ -138,6 +138,18 @@ const config = convict({
     }
   },
 
+  // Configuration related to chat; this doesn't control how the overlay
+  // connects to chat, but it does control in what circumstances automatic chat
+  // responses will be made.
+  chat: {
+    announcements: {
+      doc: 'Announce when the bot enters and leaves the channel',
+      format: Boolean,
+      env: 'TWITCHLOYALTY_CHAT_ANNOUNCE',
+      default: true
+    }
+  },
+
   // When displaying leaderboards in the overlay for the people that have gifted
   // subs and bits, this is the maximum number of people to display in the list,
   // after sorting them based on their contributions.
