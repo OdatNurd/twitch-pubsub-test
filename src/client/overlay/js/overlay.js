@@ -8,6 +8,7 @@ import { gsap } from 'gsap';
 import { Draggable } from 'gsap/Draggable';
 import { Flip } from 'gsap/Flip';
 
+const WebFont = require('webfontloader');
 const humanize = require("humanize-duration").humanizer({
   language: "shortEn",
   languages: {
@@ -66,7 +67,7 @@ let bitsLeaders = undefined;
 /* This HTML is used to specify the default entry in a gifter box when it's
  * empty, so that people know they should gift. This also allows us to pick up
  * the dimensions of an item in the list. */
-const placeholderHtml = `<div class="gift-box border">Gift now to take the lead!</div>`;
+const placeholderHtml = `<div class="gift-box">Gift now to take the lead!</div>`;
 
 
 // =============================================================================
@@ -108,7 +109,7 @@ function moveOverlay(overlay) {
  * on the gifter provided. */
 function divForGifter(gifter) {
   return domParser.parseFromString(
-    `<div class="gift-box border" data-twitch-id="${gifter.userId}">
+    `<div class="gift-box" data-twitch-id="${gifter.userId}">
       <span class="name">${gifter.name}</span>
       (<span class="score">${gifter.score}</span>)
     </div>`, 'text/html').querySelector('div');
@@ -496,5 +497,10 @@ async function setup() {
 
 // =============================================================================
 
-
-setup();
+WebFont.load({
+  google: {
+    families: ['Orbitron:900', 'Montserrat:600', 'Roboto:500']
+  },
+  active: () => setup(),
+  inactive: () => console.log('Unable to load our web fonts; cannot display'),
+});
