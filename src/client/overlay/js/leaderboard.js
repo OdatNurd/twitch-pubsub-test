@@ -75,6 +75,169 @@ function resizeGifterHeader(boxElement, minWidth) {
 // =============================================================================
 
 
+/* This function uses the incoming update data to queue up some animations for
+ * adjusting the scores of people that currently appear on the screen, if their
+ * total gift amount in this board has changed.
+ *
+ * This will animate them even if they're about to be kicked out of the list. */
+function updateExistingUserScores(board, current_leaderboard, update_map, parent_timeline) {
+  current_leaderboard.forEach(user => {
+    // Get the new score; if it didn't change, we can just skip over this one.
+    const new_score = update_map[user.userId].score;
+    if (user.score === new_score) {
+      return;
+    }
+
+    // Look for a div that represents this particular user
+    const div = divForUserId(board, user.userId);
+    if (div === null) {
+      return;
+    }
+
+    // Grab the score element out and animate it changing
+    const score = div.querySelector('.score');
+    if (score !== null) {
+      const timeline = gsap.timeline({ defaults: { duration: 0.2 }})
+        .to(score, { blur: 5, scale: 2.5, onComplete: () => score.innerText = new_score })
+        .to(score, { blur: 0, scale: 1 });
+
+      parent_timeline.add(timeline, 0);
+    }
+  });
+}
+
+
+// =============================================================================
+
+
+/* This function will find all of the people that are currently visible in the
+ * leaderboard in the overlay that are no longer eligible to be there and
+ * animate them leaving the leaderboard. */
+function removeIneligibleUsers(board, leaderboard, ineligible_partipants, parent_timeline) {
+  // The people that are leaving are the people on the leaderboard that are also
+  // currently ineligible to be there. If that is nobody, we can just leave.
+  const leaving = [...leaderboard].filter(x => ineligible_partipants.has(x));
+  if (leaving.length === 0) {
+    return;
+  }
+
+  // For all of the people that are leaving, we're going to queue up an
+  // animation; we want then to all run sequentially, so set up a timeline with
+  // some default values.
+  const timeline = gsap.timeline({ defaults: { duration: .65, ease: "elastic.out(2, 0.4)" }})
+  leaving.forEach(userId => {
+    const div = divForUserId(board, userId);
+    if (div === null) {
+      return;
+    }
+
+    timeline.to(div, { opacity: 0, x: -100, onComplete: () => {
+      board.removeChild(div);
+    }});
+  });
+
+  parent_timeline.add(timeline);
+}
+
+// =============================================================================
+
+
+/* This function will find all of the people that are currently visible in the
+ * leaderboard on the overlay that are still eligible to be there, and alter
+ * their visible position on the board so that they animate to where they now
+ * belong. */
+function rearrangeRemainingUsers(board, leaderboard, current_leaderboard, eligible_partipants, dimensions, parent_timeline) {
+  // The list of people that are remaining are all of the people on the
+  // leaderboard that are still eligible to be there. If there are none, we can
+  // just leave.
+  const loiterers = [...eligible_partipants].filter(x => leaderboard.has(x));
+  if (loiterers.length === 0) {
+    return;
+  }
+  // console.log('loiterers => ', loiterers);
+
+  // Save the state of the current children.
+  const startState = Flip.getState(board.children);
+  let shifted = 0;
+
+  // For each person hanging around, figure out what their index is going to
+  // be, and also what their index currently is. If they're different, then
+  // they need to move; if they're the same, we do nada.
+  loiterers.forEach(userId => {
+    const cur_idx = current_leaderboard.findIndex(user => user.userId === userId);
+    const new_idx = eligible_partipants.indexOf(userId);
+
+    if (cur_idx !== new_idx) {
+      const div = divForUserId(board, userId);
+      if (div === null) {
+        return;
+      }
+
+      shifted++;
+      div.style.top = new_idx * dimensions.height + dimensions.top;
+    }
+  });
+
+  // If any children have shifted locations, then we can schedule the
+  // animation now.
+  if (shifted !== 0) {
+    parent_timeline.add(Flip.from(startState))
+  }
+}
+
+
+// =============================================================================
+
+
+/* This function will find all of the people that are eligible to be in the
+ * leaderboard display, but which are currently not, and animate them into
+ * position.
+ *
+ * It assumes that the visial space for each item being added has been made by
+ * kicking people out of the list and/or rearranging people into a better
+ * position. */
+function addNewUsers(board, leaderboard, current_leaderboard, eligible_partipants, update_map, dimensions, parent_timeline) {
+  // The list of people being added to the leaderboard are the people that are
+  // eligible to be there, but which are currently not. If there are none, we
+  // can leave.
+  const arrivals = [...eligible_partipants].filter(x => leaderboard.has(x) === false);
+  if (arrivals.length === 0) {
+    return 0;
+  }
+  // console.log('arrivals => ', arrivals);
+
+  // If there is someone arriving into the board but the leaderboard is
+  // currently empty, then this is the first addition; we need to animate the
+  // placeholder going away so that we can make room.
+  if (arrivals.length !== 0 && current_leaderboard.length === 0) {
+    const div = divForUserId(board, "-1");
+    if (div !== null) {
+      const tween = gsap.to(div, { duration: 0.50, scale: 0.25, blur: 3, opacity: 0, onComplete: () => board.removeChild(div) });
+      parent_timeline.add(tween);
+    }
+  }
+
+  // Queue up some sequential animations that show people entering the screen
+  // at the appropriate location.
+  const timeline = gsap.timeline({ defaults: { duration: .65, ease: "elastic.out(2, 0.4)" }})
+  arrivals.forEach(userId => {
+    const idx = eligible_partipants.indexOf(userId);
+    const gifter = update_map[userId];
+
+    const div = divForGifter(gifter);
+    div.style.top = idx * dimensions.height + dimensions.top;
+
+    board.appendChild(div);
+    timeline.from(div, { opacity: 0, x: 500 });
+  });
+
+  parent_timeline.add(timeline);
+}
+
+
+// =============================================================================
+
+
 /* Update the leaderboard of the given type using the items provided; new items
  * will be added to the element provides. */
 function updateLeaderboard(giftBox, board, headerWidth, dimensions, current_leaderboard, display_size, updated_data) {
@@ -88,7 +251,7 @@ function updateLeaderboard(giftBox, board, headerWidth, dimensions, current_lead
 
   // If the current leaderboard is undefined, this is the first update that it's
   // ever received; for our work below we need this to be valid.
-  current_leaderboard = current_leaderboard ||   [];
+  current_leaderboard ??= [];
 
   // Capture a set that represents the list of people that are currently
   // visualized on the leaderboard; this could be empty if this is the first
@@ -115,137 +278,22 @@ function updateLeaderboard(giftBox, board, headerWidth, dimensions, current_lead
   // =============================================================
   // Step 0: Update scores for people currently on the leaderboard
   // =============================================================
-  current_leaderboard.forEach(user => {
-    const new_score = update_map[user.userId].score;
-
-    // If the score for this user didn't change, then there's nothing that we
-    // have to do.
-    if (user.score === new_score) {
-      return;
-    }
-
-    // Make sure the entry in the leaderboard is up to date with the new score.
-    user.score = new_score;
-
-    // Look for a div that represents this particular user
-    const div = divForUserId(board, user.userId);
-    if (div === null) {
-      return;
-    }
-
-    // Grab the score element out and animate it changing; this will make it
-    // scale up while blurring, then alter the text to the new value before
-    // shrinking back down.
-    const score = div.querySelector('.score');
-    if (score !== null) {
-      const subTl = gsap.timeline({ defaults: { duration: 0.2 }})
-        .to(score, { blur: 5, scale: 2.5, onComplete: () => score.innerText = user.score })
-        .to(score, { blur: 0, scale: 1 });
-
-      timeline.add(subTl, 0);
-    }
-  });
-
+  updateExistingUserScores(board, current_leaderboard, update_map, timeline);
 
   // ====================================================================
   // Step 1: Kick people out of the leaderboard that have lost their spot
   // ====================================================================
-  const leaving = [...leaderboard].filter(x => ineligible_partipants.has(x));
-  // console.log('leaving => ', leaving);
-
-  const departures_tl = gsap.timeline({ defaults: { duration: .65, ease: "elastic.out(2, 0.4)" }})
-  leaving.forEach(userId => {
-    const div = divForUserId(board, userId);
-    if (div === null) {
-      return;
-    }
-
-    departures_tl.to(div, { opacity: 0, x: -100, onComplete: () => {
-      board.removeChild(div);
-    }});
-  });
-  timeline.add(departures_tl);
-
+  removeIneligibleUsers(board, leaderboard, ineligible_partipants, timeline)
 
   // =======================================================================
   // Step 2: Rearrange people that will remain in the list to their new spot
   // =======================================================================
-  const loiterers = [...eligible_partipants].filter(x => leaderboard.has(x));
-  // console.log('loiterers => ', loiterers);
-
-  // If there are any loiterers around, then we can rearrange them as needed
-  // so that they end up in the right spot.
-  //
-  // NOTE: This is going to capture the state of all children as they currently
-  //       exist, but since we might have kicked people out, it's going to
-  //       capture the state of children that are going away but are technically
-  //       still here. Does that matter? Maybe not, if we position things such
-  //       that they end up in the same place anyway?
-  if (loiterers.length !== 0) {
-    // Save the state of the current children.
-    const startState = Flip.getState(board.children);
-    let shifted = 0;
-
-    // For each person hanging around, figure out what their index is going to
-    // be, and also what their index currently is. If they're different, then
-    // they need to move; if they're the same, we do nada.
-    loiterers.forEach(userId => {
-      const cur_idx = current_leaderboard.findIndex(user => user.userId === userId);
-      const new_idx = eligible_partipants.indexOf(userId);
-
-      if (cur_idx !== new_idx) {
-        const div = divForUserId(board, userId);
-        if (div === null) {
-          return;
-        }
-
-        shifted++;
-        div.style.top = new_idx * dimensions.height + dimensions.top;
-      }
-    });
-
-    // If any children have shifted locations, then we can schedule the
-    // animation now.
-    if (shifted !== 0) {
-      timeline.add(Flip.from(startState))
-    }
-  }
-
+  rearrangeRemainingUsers(board, leaderboard, current_leaderboard, eligible_partipants, dimensions, timeline);
 
   // =======================================================================
   // Step 3: Add incoming new people into the leaderboard at the proper spot
   // =======================================================================
-  const arrivals = [...eligible_partipants].filter(x => leaderboard.has(x) === false);
-  // console.log('arrivals => ', arrivals);
-
-  // If the list of arrivals is not empty but the leaderboard is, then this is
-  // the very first user that's being added to the leaderboard. If that's the
-  // case, we need to vanish away the placeholder.
-  if (arrivals.length !== 0 && current_leaderboard.length === 0) {
-    // Find the placeholder div in this board; if we find it, make it hide
-    // itself, and then remove it from the DOM.
-    const div = divForUserId(board, "-1");
-    if (div !== null) {
-      const subTl = gsap.timeline()
-        .to(div, { duration: 0.50, scale: 0.25, blur: 3, opacity: 0, onComplete: () => {
-          board.removeChild(div);
-        }});
-      timeline.add(subTl);
-    }
-  }
-
-  const arrivals_tl = gsap.timeline({ defaults: { duration: .65, ease: "elastic.out(2, 0.4)" }})
-  arrivals.forEach(userId => {
-    const idx = eligible_partipants.indexOf(userId);
-    const gifter = update_map[userId];
-
-    const div = divForGifter(gifter);
-    div.style.top = idx * dimensions.height + dimensions.top;
-    board.appendChild(div);
-    arrivals_tl.from(div, { opacity: 0, x: 500 });
-
-  });
-  timeline.add(arrivals_tl);
+  addNewUsers(board, leaderboard, current_leaderboard, eligible_partipants, update_map, dimensions, timeline);
 
   // All animation setup is done, so start the animation running.
   timeline.play();
