@@ -98,7 +98,7 @@ function updateExistingUserScores(board, current_leaderboard, update_map, parent
     const score = div.querySelector('.score');
     if (score !== null) {
       const timeline = gsap.timeline({ defaults: { duration: 0.2 }})
-        .to(score, { blur: 5, scale: 2.5, onComplete: () => score.innerText = new_score })
+        .to(score, { blur: 5, scale: 3, onComplete: () => score.innerText = new_score })
         .to(score, { blur: 0, scale: 1 });
 
       parent_timeline.add(timeline, 0);
@@ -124,16 +124,15 @@ function removeIneligibleUsers(board, leaderboard, ineligible_partipants, parent
   // For all of the people that are leaving, we're going to queue up an
   // animation; we want then to all run sequentially, so set up a timeline with
   // some default values.
-  const timeline = gsap.timeline({ defaults: { duration: .65, ease: "elastic.out(2, 0.4)" }})
+  const timeline = gsap.timeline({ defaults: { opacity: 0, x: -100, duration: .65,
+                                               ease: "elastic.out(2, 0.4)" }});
   leaving.forEach(userId => {
     const div = divForUserId(board, userId);
     if (div === null) {
       return;
     }
 
-    timeline.to(div, { opacity: 0, x: -100, onComplete: () => {
-      board.removeChild(div);
-    }});
+    timeline.to(div, { onComplete: () => board.removeChild(div) });
   });
 
   parent_timeline.add(timeline);
@@ -154,7 +153,6 @@ function rearrangeRemainingUsers(board, leaderboard, current_leaderboard, eligib
   if (loiterers.length === 0) {
     return;
   }
-  // console.log('loiterers => ', loiterers);
 
   // Save the state of the current children.
   const startState = Flip.getState(board.children);
@@ -181,7 +179,7 @@ function rearrangeRemainingUsers(board, leaderboard, current_leaderboard, eligib
   // If any children have shifted locations, then we can schedule the
   // animation now.
   if (shifted !== 0) {
-    parent_timeline.add(Flip.from(startState))
+    parent_timeline.add(Flip.from(startState, { duration: 1, ease: "elastic.out(1, 0.3)" }))
   }
 }
 
@@ -204,7 +202,6 @@ function addNewUsers(board, leaderboard, current_leaderboard, eligible_partipant
   if (arrivals.length === 0) {
     return 0;
   }
-  // console.log('arrivals => ', arrivals);
 
   // If there is someone arriving into the board but the leaderboard is
   // currently empty, then this is the first addition; we need to animate the
@@ -212,15 +209,13 @@ function addNewUsers(board, leaderboard, current_leaderboard, eligible_partipant
   if (arrivals.length !== 0 && current_leaderboard.length === 0) {
     const div = divForUserId(board, "-1");
     if (div !== null) {
-      const tween = gsap.to(div, { duration: 0.50, scale: 0.25, blur: 3, opacity: 0, onComplete: () => board.removeChild(div) });
+      const tween = gsap.to(div, { duration: 0.25, scale: 0.15, blur: 5, opacity: 0, onComplete: () => board.removeChild(div) });
       parent_timeline.add(tween);
     }
   }
 
-  // Queue up some sequential animations that show people entering the screen
-  // at the appropriate location.
-  const timeline = gsap.timeline({ defaults: { duration: .65, ease: "elastic.out(2, 0.4)" }})
-  arrivals.forEach(userId => {
+  // Create divs for all of the people that will be added to the list.
+  const animList = arrivals.map(userId => {
     const idx = eligible_partipants.indexOf(userId);
     const gifter = update_map[userId];
 
@@ -228,10 +223,10 @@ function addNewUsers(board, leaderboard, current_leaderboard, eligible_partipant
     div.style.top = idx * dimensions.height + dimensions.top;
 
     board.appendChild(div);
-    timeline.from(div, { opacity: 0, x: 500 });
+    return div;
   });
 
-  parent_timeline.add(timeline);
+  parent_timeline.from(animList, { duation: 1, ease: "elastic.out(1, 0.3)", opacity: 0, x: 200, stagger: 0.50 });
 }
 
 
