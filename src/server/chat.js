@@ -163,6 +163,22 @@ async function chatDo(action) {
 // =============================================================================
 
 
+/* Transmit an announcement to the chat with the given text as the currently
+ * authorized user; if there is no user currently authorized, then this will
+ * do nothing. */
+async function chatAnnounce(text) {
+  if (chat.client === undefined) {
+    return;
+  }
+
+  console.log(`ANNOUNCE:*${chat.channel}* ${text}`);
+  return chat.client.announce(chat.channel, text);
+}
+
+
+// =============================================================================
+
+
 /* This sets up our Twitch chat functionality by listening for events that are
  * broadcast from the Twitch subsystem over the provided event bridge, reacting
  * to a user being authorized or unauthorized by either entering or leaving
@@ -180,4 +196,5 @@ module.exports = {
   setupTwitchChat,
   chatSay,
   chatDo,
+  chatAnnounce
 }
