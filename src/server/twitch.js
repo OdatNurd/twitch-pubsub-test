@@ -359,10 +359,10 @@ async function twitchCallback(db, bridge, req, res) {
 function setupTwitchAuthorization(db, app, bridge) {
   // Let interested parties know that there's a new socket connected, in case
   // they need to take some action.
-  bridge.on('socket-connect', socket => {
+  bridge.on('socket-connect', data => {
     // Send a message to this socket to tell it the Twitch authorization state.
     // Further updates will automatically occur as they happen.
-    sendTwitchAuthUpdate(socket);
+    sendTwitchAuthUpdate(data.socket);
   });
 
   // This route kicks off our authorization with twitch. It will store some

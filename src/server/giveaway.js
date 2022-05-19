@@ -498,8 +498,8 @@ function setupGiveawayHandler(db, app, bridge) {
 
   // Every time a new socket connects to the server, send it a message to tell
   // it the state of the current giveaway, if any.
-  bridge.on('socket-connect', socket => {
-    socket.emit('giveaway-info', {
+  bridge.on('socket-connect', data => {
+    data.socket.emit('giveaway-info', {
       startTime: currentGiveaway?.startTime,
       endTime: currentGiveaway?.endTime,
       duration: currentGiveaway?.duration,
@@ -507,9 +507,9 @@ function setupGiveawayHandler(db, app, bridge) {
       paused: currentGiveaway?.paused,
     });
 
-    transmitLeaderInfo(true, true, socket);
+    transmitLeaderInfo(true, true, data.socket);
 
-    socket.on('overlay-drag', async (data) => {
+    data.socket.on('overlay-drag', async (data) => {
       sendSocketMessage('overlay-moved', data);
       await db.overlay.upsert({
         where: { name: data.name },
