@@ -260,7 +260,7 @@ async function setup() {
   // Get our configuration, and then use it to connect to the back end so that
   // we can communicate with it and get events.
   const config = await getConfig();
-  const socket = getWebSocket(location.hostname, config.socketPort);
+  const socket = getWebSocket(location.hostname, config.socketPort, 'overlay');
 
   // Using the configuration information on overlays ansd their positions, move
   // them into the appropriate place, and set up the drag/drop on their

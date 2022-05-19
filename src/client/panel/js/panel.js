@@ -165,7 +165,7 @@ async function setup() {
   // Get our configuration, and then use it to connect to the back end so
   // that we can communicate with it and get events.
   const config = await getConfig();
-  const socket = getWebSocket(location.hostname, config.socketPort,
+  const socket = getWebSocket(location.hostname, config.socketPort, 'controls',
                              trackConnectionState('connection-state'));
 
   // The start button either starts a new giveaway or pauses the existing

@@ -17,7 +17,7 @@ const WebSocketWrapper = require("ws-wrapper");
  * If provided, the callback will be invoked every time the connection state
  * changes, and be passed a boolean that's true if the socket is connected and
  * false if it's not. */
-function getWebSocket(hostname, port, callback) {
+function getWebSocket(hostname, port, role, callback) {
   // Construct the URL that we're going to be connecting to.
   const url = `ws://${hostname}:${port}`;
 
@@ -28,7 +28,9 @@ function getWebSocket(hostname, port, callback) {
   // Purely for informational reasons, display connection information so that
   // we can verify that things are working as expected.
   socket.on("open", event => {
-    console.log(`connect: ${event.target.url}`);
+    console.log(`connect: ${event.target.url} as ${role}`);
+    socket.emit('role-announce', role);
+
     if (callback !== undefined) {
       callback(true);
     }

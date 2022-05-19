@@ -49,7 +49,7 @@ async function setup() {
   // Get our configuration, and then use it to connect to the back end so
   // that we can communicate with it and get events.
   const config = await getConfig();
-  const socket = getWebSocket(location.hostname, config.socketPort,
+  const socket = getWebSocket(location.hostname, config.socketPort, 'test-controls',
                              trackConnectionState('connection-state'));
 
   // Set up the select tag with the list of test users.
