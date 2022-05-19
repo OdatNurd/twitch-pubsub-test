@@ -24,7 +24,7 @@
     }
   },
   "dependencies": {
-    "@prisma/client": "^3.13.0",
+    "@prisma/client": "^3.14.0",
     "@twurple/api": "^5.0.18",
     "@twurple/auth": "^5.0.18",
     "@twurple/chat": "^5.0.18",
@@ -44,6 +44,6 @@
   },
   "devDependencies": {
     "parcel": "^2.2.0",
-    "prisma": "^3.13.0"
+    "prisma": "^3.14.0"
   }
 }
