@@ -77,7 +77,7 @@ async function enterTwitchChat(twitch) {
     // what name we're known by. Once that happens, this event triggers.
     chat.client.onRegister(() => {
       console.log(`Registered with Twitch chat as ${chat.client.currentNick}`);
-      if (config.get('chat.announcements') === true) {
+      if (config.get('chat.presence') === true) {
         chatSay('Good news everyone, I have arrived!')
       }
     }),
@@ -106,7 +106,7 @@ async function leaveTwitchChat() {
     return;
   }
 
-  if (config.get('chat.announcements') === true) {
+  if (config.get('chat.presence') === true) {
     await chatDo('peaces out');
   }
 

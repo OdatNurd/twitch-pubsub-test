@@ -142,7 +142,7 @@ const config = convict({
   // connects to chat, but it does control in what circumstances automatic chat
   // responses will be made.
   chat: {
-    announcements: {
+    presence: {
       doc: 'Announce when the bot enters and leaves the channel',
       format: Boolean,
       env: 'TWITCHLOYALTY_CHAT_ANNOUNCE',
