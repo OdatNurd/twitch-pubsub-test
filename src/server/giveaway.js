@@ -3,7 +3,7 @@
 
 const { config } = require('./config');
 const { objId } = require('./db');
-const { chatSay } = require('./chat');
+const { chatSay, chatAnnounce } = require('./chat');
 const { sendSocketMessage } = require('./socket');
 
 
@@ -248,6 +248,10 @@ async function startGiveaway(db, req, res) {
   // the notice that the giveaway is running.
   resumeCurrentGiveaway(db, req.query.userId, false);
 
+  if (config.get('chat.announceStart') === true) {
+    await chatAnnounce('A new giveaway is starting! Use bits and subs to get on the leaderboard and win prizes!');
+  }
+
   res.json({success: true});
 }
 
@@ -277,6 +281,10 @@ async function pauseGiveaway(db, req, res) {
   // to make sure that it knows what the current state is.
   currentGiveaway.paused = true;
   await updateCurrentGiveaway(db)
+
+  if (config.get('chat.announcePause') === true) {
+    await chatAnnounce('The giveaway is temporarily on hold, but don\'t worry, we will resume in just a moment');
+  }
 
   // Let everyone know the new state of the giveaway.
   sendSocketMessage('giveaway-info', currentGiveaway);
@@ -311,7 +319,11 @@ async function unpauseGiveaway(db, req, res) {
   // Set up the variables that let us know when we last ticked and last synced,
   // then start the timer.
   lastTickTime = lastSyncTime = Date.now();
-  giveawayTimerTick(db)
+  giveawayTimerTick(db);
+
+  if (config.get('chat.announcePause') === true) {
+    await chatAnnounce('The giveaway has resumed! You may now continue your quest to be the best... gifter!');
+  }
 
   res.json({success: true});
 }
@@ -350,6 +362,10 @@ async function cancelGiveaway(db, req, res) {
   // Broadcast that the giveaway is no longer running or even existing.
   sendSocketMessage('giveaway-info', {});
   transmitLeaderInfo(true, true);
+
+  if (config.get('chat.announceEnd') === true) {
+    await chatAnnounce('The giveaway has ended! Thanks to everyone who participated, now lets get to those prizes!');
+  }
 
   res.json({success: true});
 }

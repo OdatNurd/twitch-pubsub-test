@@ -147,6 +147,27 @@ const config = convict({
       format: Boolean,
       env: 'TWITCHLOYALTY_CHAT_ANNOUNCE',
       default: true
+    },
+
+    announceStart: {
+      doc: 'Announce when a giveaway is started',
+      format: Boolean,
+      env: 'TWITCHLOYALTY_GIVEAWAY_START_ANNOUNCE',
+      default: true
+    },
+
+    announcePause: {
+      doc: 'Announce when a giveaway is paused or resumed',
+      format: Boolean,
+      env: 'TWITCHLOYALTY_GIVEAWAY_PAUSE_ANNOUNCE',
+      default: true
+    },
+
+    announceEnd: {
+      doc: 'Announce when a giveaway ends',
+      format: Boolean,
+      env: 'TWITCHLOYALTY_GIVEAWAY_END_ANNOUNCE',
+      default: true
     }
   },
 
