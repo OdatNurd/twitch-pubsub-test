@@ -33,7 +33,7 @@
     "convict": "^6.2.1",
     "dotenv": "^12.0.3",
     "express": "^4.17.2",
-    "gsap": "npm:@gsap/shockingly",
+    "gsap": "^3.10.4",
     "humanize-duration": "^3.27.1",
     "json5": "^2.2.0",
     "ksuid": "^3.0.0",

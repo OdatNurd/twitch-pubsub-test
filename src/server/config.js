@@ -39,7 +39,7 @@ const required = value => {
 const required_len_32 = value => {
   required(value);
   if (value.length !== 32) {
-    throw new Error('This value must be exactly 32 characters long');
+    throw new Error(`This value must be exactly 32 characters long (it is ${value.length}) currently`);
   }
 }
 
