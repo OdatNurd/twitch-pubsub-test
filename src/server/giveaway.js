@@ -4,7 +4,7 @@
 const { config } = require('./config');
 const { objId } = require('./db');
 const { chatSay, chatAnnounce } = require('./chat');
-const { sendSocketMessage } = require('./socket');
+const { broadcastSocketMessage } = require('./socket');
 
 
 const humanize = require("humanize-duration").humanizer({
@@ -127,7 +127,7 @@ function transmitLeaderInfo(bits, subs, socket) {
     if (socket !== undefined) {
       socket.emit(msg, update);
     } else {
-      sendSocketMessage(msg, update);
+      broadcastSocketMessage(msg, update);
     }
   };
 
@@ -185,12 +185,12 @@ async function giveawayTimerTick(db) {
     // about it.
     currentGiveaway = undefined;
 
-    sendSocketMessage('giveaway-info', {});
+    broadcastSocketMessage('giveaway-info', {});
     return
   }
 
   // Send a status update to anyone interested.
-  sendSocketMessage('giveaway-tick', currentGiveaway);
+  broadcastSocketMessage('giveaway-tick', currentGiveaway);
 
   // Dump the current information to the database.
   if (thisTime - lastSyncTime >= 10000) {
@@ -287,7 +287,7 @@ async function pauseGiveaway(db, req, res) {
   }
 
   // Let everyone know the new state of the giveaway.
-  sendSocketMessage('giveaway-info', currentGiveaway);
+  broadcastSocketMessage('giveaway-info', currentGiveaway);
   res.json({success: true});
 }
 
@@ -314,7 +314,7 @@ async function unpauseGiveaway(db, req, res) {
   await updateCurrentGiveaway(db)
 
   // Let interested parties know that the state changed.
-  sendSocketMessage('giveaway-info', currentGiveaway);
+  broadcastSocketMessage('giveaway-info', currentGiveaway);
 
   // Set up the variables that let us know when we last ticked and last synced,
   // then start the timer.
@@ -360,7 +360,7 @@ async function cancelGiveaway(db, req, res) {
   currentParticipants = undefined;
 
   // Broadcast that the giveaway is no longer running or even existing.
-  sendSocketMessage('giveaway-info', {});
+  broadcastSocketMessage('giveaway-info', {});
   transmitLeaderInfo(true, true);
 
   if (config.get('chat.announceEnd') === true) {
@@ -444,7 +444,7 @@ async function resumeCurrentGiveaway(db, userId, autoPause) {
     giveawayTimerTick(db)
   }
 
-  sendSocketMessage('giveaway-info', currentGiveaway);
+  broadcastSocketMessage('giveaway-info', currentGiveaway);
 }
 
 
@@ -474,7 +474,7 @@ async function suspendCurrentGiveaway(db) {
   currentGiveaway = undefined;
   currentParticipants = undefined;
 
-  sendSocketMessage('giveaway-info', currentGiveaway);
+  broadcastSocketMessage('giveaway-info', currentGiveaway);
   transmitLeaderInfo(true, true);
 }
 
@@ -510,7 +510,7 @@ function setupGiveawayHandler(db, app, bridge) {
     transmitLeaderInfo(true, true, data.socket);
 
     data.socket.on('overlay-drag', async (data) => {
-      sendSocketMessage('overlay-moved', data);
+      broadcastSocketMessage('overlay-moved', data);
       await db.overlay.upsert({
         where: { name: data.name },
         create: { ...data },
@@ -698,7 +698,7 @@ async function handlePubSubSubscription(db, twitch, msg) {
   // Track this as a gift sub for the gifting user.
   await updateGifterInfo(db, twitch, getMsgUser(msg), 0, 1);
 
-  // sendSocketMessage('twitch-sub', {
+  // broadcastSocketMessage('twitch-sub', {
   //   gifterDisplayName: msg.gifterDisplayName,
   //   gifterId: msg.gifterId,
   //   isAnonymous: msg.isAnonymous,
@@ -732,7 +732,7 @@ async function handlePubSubBits(db, twitch, msg) {
   // Track this as addition bits for this particular user.
   await updateGifterInfo(db, twitch, getMsgUser(msg), msg.bits, 0);
 
-  // sendSocketMessage('twitch-bits', {
+  // broadcastSocketMessage('twitch-bits', {
   //   bits: msg.bits,
   //   isAnonymous: msg.isAnonymous,
   //   message: msg.message,

@@ -9,7 +9,7 @@ const { ApiClient } = require('@twurple/api');
 const { v4: uuidv4 } = require('uuid');
 const { objId } = require('./db');
 
-const { sendSocketMessage } = require('./socket');
+const { broadcastSocketMessage } = require('./socket');
 const { encrypt, decrypt } = require('./crypto');
 
 
@@ -82,7 +82,7 @@ function sendTwitchAuthUpdate(socket) {
   if (socket !== undefined) {
     socket.emit('twitch-auth', msg);
   } else {
-    sendSocketMessage('twitch-auth', msg);
+    broadcastSocketMessage('twitch-auth', msg);
   }
 }
 

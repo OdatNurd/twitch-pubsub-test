@@ -87,7 +87,6 @@ function setupWebSockets(bridge) {
           bridge.emit('socket-disconnect', { socket, role });
         }
       }
-
     });
   });
 }
@@ -98,7 +97,7 @@ function setupWebSockets(bridge) {
 
 /* Transmits a socket event of the given type, with any additional arguments
  * provided, to all of the currently connected web clients. */
-function sendSocketMessage(event, ...args) {
+function broadcastSocketMessage(event, ...args) {
   allClients.forEach(socket => socket.emit(event, ...args));
 }
 
@@ -108,5 +107,5 @@ function sendSocketMessage(event, ...args) {
 
 module.exports = {
   setupWebSockets,
-  sendSocketMessage,
+  broadcastSocketMessage,
 }
