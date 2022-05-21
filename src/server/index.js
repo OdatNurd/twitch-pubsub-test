@@ -13,8 +13,9 @@ const { setupWebSockets } = require('./socket');
 const { setupTwitchAuthorization, setupTwitchAccess } = require('./twitch');
 const { setupTwitchPubSub } = require('./pubsub');
 const { setupEventTesting } = require('./testing');
-const { setupTwitchChat } = require('./chat');
+const { setupTwitchChat, chatSay } = require('./chat');
 const { setupGiveawayHandler } = require('./giveaway');
+const { setupDropGame } = require('./drop_commands');
 
 const { EventEmitter } = require("events");
 
@@ -63,6 +64,7 @@ async function launch() {
   setupTwitchAuthorization(db, app, bridge);
   setupEventTesting(db, app, bridge);
   setupGiveawayHandler(db, app, bridge);
+  setupDropGame(bridge, chatSay);
 
   // Set up some middleware that will serve static files out of the public folder
   // so that we don't have to inline the pages in code.

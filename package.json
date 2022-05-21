@@ -18,7 +18,8 @@
       "source": [
         "src/client/panel/index.html",
         "src/client/panel/test.html",
-        "src/client/overlay/index.html"
+        "src/client/overlay/index.html",
+        "src/client/dropgame/index.html"
       ],
       "distDir": "./public"
     }

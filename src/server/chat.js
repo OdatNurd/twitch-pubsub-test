@@ -4,6 +4,8 @@
 const { config } = require('./config');
 
 const { ChatClient } = require('@twurple/chat');
+const { CommandParser } = require('./cmd_parser.js');
+const { drop_cmd, cut_cmd, abdicate_cmd } = require('./drop_commands.js');
 
 
 // =============================================================================
@@ -21,7 +23,21 @@ let chat = {
   client: undefined,
   channel: undefined,
   listeners: undefined,
-}
+};
+
+
+/* A global command parser object that can parse any incoming chat message and
+ * see if it's a command, and if so what properties it has. */
+const cmdParser = new CommandParser();
+
+
+/* This maps the list of commands that we know how to respond to in chat to the
+ * handler functions that know how to invoke them. */
+const cmd_map = {
+  '!drop': drop_cmd,
+  '!cut': cut_cmd,
+  '!abdicate': abdicate_cmd,
+};
 
 
 // =============================================================================
@@ -56,6 +72,25 @@ async function enterTwitchChat(twitch) {
   // Set up the listeners for chat events that we're interested in handling;
   // these are captured into a list so we can destroy them later.
   chat.listeners = [
+    chat.client.onMessage((channel, user, message, rawMsg) => {
+      console.log(`${channel}:<${user}> ${message}`);
+
+      // Parse the message to see if it looks like it might be a command.
+      const details = cmdParser.parse(message, channel, rawMsg);
+      if (details.name === '') {
+        return;
+      }
+
+      // console.log(details);
+      const handler = cmd_map[details.name];
+      if (handler === undefined) {
+        console.log(`* ignoring unknown command '${details.name}`);
+        return;
+      }
+
+      handler(details, rawMsg.userInfo)
+    }),
+
     // Display a notification when the chat connects,.
     chat.client.onConnect(() => {
       console.log('Twitch chat connection established');
