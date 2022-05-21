@@ -105,7 +105,25 @@ function broadcastSocketMessage(event, ...args) {
 // =============================================================================
 
 
+/* Transmits a socket event of the given type, with any additional arguments
+ * provided, to all of the currently connected web clients. */
+function sendSocketMessage(role, event, ...args) {
+  const clients = clientRoles[role];
+  if (clients !== undefined) {
+    clients.forEach(socket => socket.emit(event, ...args));
+  } else {
+    console.log(`could not send message ${event} to '${role}'; no connections of that type`);
+  }
+}
+
+
+// =============================================================================
+
+
+// TODO: We should have methods for knowing how many connections of each role
+// there are, as well as the list of roles, so that external code can query.
 module.exports = {
   setupWebSockets,
+  sendSocketMessage,
   broadcastSocketMessage,
 }
