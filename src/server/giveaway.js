@@ -102,8 +102,6 @@ function getMsgUser(msg) {
  * This will debounce the transmission, so it's safe to invoke this as often as
  * you like. */
 function transmitLeaderInfo(bits, subs, socket) {
-  console.log(`transmitLeaderInfo(${bits}, ${subs})`);
-
   // Reduce the list of participants to a list of those that have the property
   // that we're interested in, and send it off.
   //
@@ -123,7 +121,6 @@ function transmitLeaderInfo(bits, subs, socket) {
     }, []);
     update.sort((left, right) => right.score - left.score);
 
-    console.dir(update);
     if (socket !== undefined) {
       socket.emit(msg, update);
     } else {
@@ -408,7 +405,7 @@ async function resumeCurrentGiveaway(db, userId, autoPause) {
 
   // This one looks good, so use this as the current giveaway
   currentGiveaway = entry;
-  console.dir(entry)
+  // console.dir(entry)
 
   // The list of people that have giften in this giveaway already (if any) is
   // a part of the object; pull it out and remove it from the object, since
@@ -424,7 +421,7 @@ async function resumeCurrentGiveaway(db, userId, autoPause) {
     prev[cur.userId] = cur;
     return prev;
   }, {});
-  console.dir(currentParticipants);
+  // console.dir(currentParticipants);
   transmitLeaderInfo(true, true);
 
   // Should we automatically pause the giveaway?
@@ -567,7 +564,7 @@ async function updateGifterInfo(db, twitch, user, bits, subs) {
       }
     }
 
-    console.log(`Added gifter record: ${JSON.stringify(gifter)}`);
+    // console.log(`Added gifter record: ${JSON.stringify(gifter)}`);
     const record = await db.gifter.create({
       data: {
         id: gifter.id,
@@ -593,7 +590,7 @@ async function updateGifterInfo(db, twitch, user, bits, subs) {
     // Ask Twitch API to get the details for this user so that we can get their
     // display name
     if (record.gifter.displayName === null) {
-      console.log(`=> Need to look up the display name for ${record.gifter.userName}`);
+      // console.log(`=> Need to look up the display name for ${record.gifter.userName}`);
       const userInfo = await twitch.api.users.getUserById(gifter.userId);
       await db.user.update({
         where: { userId: gifter.userId },
@@ -603,7 +600,7 @@ async function updateGifterInfo(db, twitch, user, bits, subs) {
         }
       });
 
-      console.log(`=> Updated information: ${userInfo.id}/${userInfo.name}/${userInfo.displayName}`);
+      // console.log(`=> Updated information: ${userInfo.id}/${userInfo.name}/${userInfo.displayName}`);
     }
 
     return;
