@@ -4,7 +4,7 @@
 const getConfig = require('../../common/js/config');
 const { getWebSocket } = require('../../common/js/websocket');
 
-const { resizeGifterHeader, updateLeaderboard } = require('./leaderboard');
+const { resizeGifterHeader, updateLeaderboard, placeHolderHTML } = require('./leaderboard');
 import { gsap } from 'gsap';
 import { Draggable } from 'gsap/Draggable';
 import { Flip } from 'gsap/Flip';
@@ -71,11 +71,6 @@ let currentGiveaway = undefined;
  * in which the items appear there. */
 let bitsLeaders = undefined;
 let subsLeaders = undefined;
-
-/* This HTML is used to specify the default entry in a gifter box when it's
- * empty, so that people know they should gift. This also allows us to pick up
- * the dimensions of an item in the list. */
-const placeholderHtml = `<div class="gift-box" data-twitch-id="-1">Gift now to take the lead!</div>`;
 
 
 // =============================================================================
@@ -192,8 +187,8 @@ function setupGiftBoxes(config) {
   // Make sure that the content in the page has a placeholder starter item for
   // each of the two leader boxes, then size the headers so that they align with
   // the placeholder.
-  subListBox.innerHTML = placeholderHtml;
-  bitListBox.innerHTML = placeholderHtml;
+  subListBox.innerHTML = placeHolderHTML('subs');
+  bitListBox.innerHTML = placeHolderHTML('bits');
   subGifterHeaderMinWidth = resizeGifterHeader(gifterSubBox);
   bitGifterHeaderMinWidth = resizeGifterHeader(gifterBitsBox);
 
@@ -290,8 +285,8 @@ async function setup() {
       bitsLeaders = undefined;
       subsLeaders = undefined;
 
-      bitListBox.innerHTML = placeholderHtml;
-      subListBox.innerHTML = placeholderHtml;
+      bitListBox.innerHTML = placeHolderHTML('bits');
+      subListBox.innerHTML = placeHolderHTML('subs');
       resizeGifterHeader(gifterBitsBox, subGifterHeaderMinWidth);
       resizeGifterHeader(gifterSubBox, bitGifterHeaderMinWidth);
     }

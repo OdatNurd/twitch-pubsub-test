@@ -33,6 +33,27 @@ function divForUserId(parentLeaderboard, userId) {
 // =============================================================================
 
 
+/* Return back the placeholder HTML that should be used to fill out one of the
+ * leaderboards (either bits or subs) when it's empty to let the viewers of the
+ * stream know that they can gift in order to take the lead.
+ *
+ * Valid values are 'subs' and 'bits'. */
+function placeHolderHTML(holderType) {
+  let msg = 'Gift subs now to take the lead!'
+  if (holderType === 'bits') {
+    msg = 'Cheer now to take the lead!'
+  }
+
+  // This needs to have the same class and attribute as a standard div gifter
+  // so that it's styled the same and it addressable as the placeholder if
+  // needed; the actual content doesn't matter.
+  return `<div class="gift-box" data-twitch-id="-1">${msg}</div>`;
+}
+
+
+// =============================================================================
+
+
 /* Create and return a new uniquely addressable div containing the information
  * on the gifter provided. */
 function divForGifter(gifter) {
@@ -304,4 +325,5 @@ function updateLeaderboard(giftBox, board, headerWidth, dimensions, current_lead
 module.exports = {
   resizeGifterHeader,
   updateLeaderboard,
+  placeHolderHTML,
 };
