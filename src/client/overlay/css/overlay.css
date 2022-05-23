@@ -43,7 +43,12 @@ body {
   position: absolute;
   height: 1.5em;
   white-space: nowrap;
-  left: 0;
+
+  /* The value of this needs to match the left padding applied to the overall
+   * bits and subs parent containers (#gifters-subs and #gifters-bits); this
+   * class is used for elements in both of them so they both need to be
+   * changed). */
+  left: 16;
 }
 
 /******************************************************************************/
@@ -86,11 +91,19 @@ body {
   position: absolute;
   display:  inline-block;
 
+  /* If you change the left padding of this box, you need to also change
+   * the .gift-box class as well (and note that it's shared between both of the
+   * two leaderboards, so they both need to share the same padding). */
+  padding: 16px 16px 0 16px;
+
   min-width: 5em;
 
   font-family: 'Montserrat', sans-serif;
   font-size: 2em;
+  background-color: rgba(239,180,35,0.4);
   color: white;
+
+  border-radius: 5px 32px;
 
   opacity: 0;
 }
@@ -127,11 +140,19 @@ body {
   position: absolute;
   display:  inline-block;
 
+  /* If you change the left padding of this box, you need to also change
+   * the .gift-box class as well (and note that it's shared between both of the
+   * two leaderboards, so they both need to share the same padding). */
+  padding: 16px 16px 0 16px;
+
   min-width: 5em;
 
   font-family: 'Roboto', sans-serif;
   font-size: 2em;
+  background-color: rgba(186,47,39,0.5);
   color: white;
+
+  border-radius: 32px 5px;
 
   opacity: 0;
 }

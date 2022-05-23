@@ -188,7 +188,7 @@ function setupGsap() {
 /* Set up the initial state of the gift boxes by putting placeholders in them
  * and making sure that we know the sizes of those placeholders for later
  * animations. */
-function setupGiftBoxes() {
+function setupGiftBoxes(config) {
   // Make sure that the content in the page has a placeholder starter item for
   // each of the two leader boxes, then size the headers so that they align with
   // the placeholder.
@@ -202,6 +202,20 @@ function setupGiftBoxes() {
   // position themselves natively in the DOM.
   subListDim = getGiftElementSize(gifterSubBox);
   bitListDim = getGiftElementSize(gifterBitsBox);
+
+  // The gift children that we add to the gift boxes are positioned absolutely,
+  // and so they are removed from the document flow and don't contribute to the
+  // parent height.
+  //
+  // Since we know exactly how big each item is and the total number of  them
+  // that can appear in the list at most, force the height of each overall
+  // leaderboard parent to increase their height by that much so that they will
+  // visually be large enough to hold all children.
+  const subBox = gifterSubBox.getBoundingClientRect();
+  const bitBox = gifterBitsBox.getBoundingClientRect();
+
+  gifterSubBox.style.height = `${subBox.height + (config.subsLeadersCount * subListDim.height)}px`;
+  gifterBitsBox.style.height = `${bitBox.height + (config.bitsLeadersCount * bitListDim.height)}px`;
 }
 
 
@@ -252,15 +266,15 @@ async function setup() {
   // Set up all of the global gsap operations.
   setupGsap();
 
-  // Do the initial setup on the gift boxes, which puts in placeholders for
-  // the empty items and captures their dimensions for use in later animation
-  // positioning.
-  setupGiftBoxes();
-
   // Get our configuration, and then use it to connect to the back end so that
   // we can communicate with it and get events.
   const config = await getConfig();
   const socket = getWebSocket(location.hostname, config.socketPort, 'overlay');
+
+  // Do the initial setup on the gift boxes, which puts in placeholders for
+  // the empty items and captures their dimensions for use in later animation
+  // positioning.
+  setupGiftBoxes(config);
 
   // Using the configuration information on overlays ansd their positions, move
   // them into the appropriate place, and set up the drag/drop on their
