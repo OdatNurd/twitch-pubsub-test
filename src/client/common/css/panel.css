@@ -1,13 +1,37 @@
+/*
+ * General page properties of panel pages.
+ *
+ * This allows you to set the background color of the panels to either that
+ * used by StreamLabs or that used by OBS Studio (both in their dark mode).
+ *
+ * Alternately, set a color of your choosing. */
 body {
-  /*background: #0B161D;*/
-  background: #252525;
+  --streamlabs-bg: #0B161D;
+  --obsstudio-bg: #252525;
+
+  background: var(--obsstudio-bg);
+
   color: white;
 }
 
+/* Size every element on the page such that any padding and border applied is
+ * accounted for in the size of the element. For example, if an element is set
+ * to be 100px wide, but there is 2px of border, the element will be 100px wide,
+ * but the space for the content inside will be 96px (2px border on each side).
+ *
+ * Without this, adding padding or border causes the width to actually grow
+ * larger than you would otherwise expect to account for the added space. */
 *, *::before, *::after  {
   box-sizing: border-box;
 }
 
+
+/* General panel properties.
+ *
+ * Any heading applied within a panel should have a lower border to help make
+ * separation easier to see, all buttons, inputs and other form controls should
+ * have a known padding and margin and have a width that makes them fill the
+ * panel. */
 h3 {
   border-bottom: 1px solid;
 }
@@ -25,6 +49,11 @@ select, input[type='text'] {
   width: 100%;
 }
 
+/* For generating lists of links.
+ *
+ * These properties are used in any place where there is expected to be a list
+ * of some number of links, and they should be packed such that they form a
+ * row with all links evenly sized. */
 .button-link-box {
 /*  border: 1px dashed blue;*/
 
@@ -37,16 +66,28 @@ select, input[type='text'] {
   margin: 2px;
 }
 
+/* When displaying warnings in panels (for example, when cancelling a running
+ * giveaway) this sets the properties of the warning text. */
 .warning {
   color:  #ff8ca7;
   font-size: 90%;
   text-align: center;
 }
 
+/* When hiding items in panels, this class is applied. This is used for the
+ * portions of the main panel that allow you to confirm the cancellation of a
+ * running giveaway, for example. */
 .hidden {
   display: none;
 }
 
+/* All of the panels and overlays connect to the back end of the application to
+ * receive information on giveaway events, etc. The panels display visible
+ * text that indicates if they are connected to the back end or not at the top
+ * of the panel.
+ *
+ * These classes are used to specify the style of that text; its size, alignment
+ * and color based on status. */
 .connected {
   color: #8cffa7;
 }
@@ -60,30 +101,4 @@ select, input[type='text'] {
   padding-bottom: 0.5em;
   font-size: 90%;
   text-align: center;
-}
-
-#start-giveaway-container {
-
-}
-
-#cancel-giveaway-container {
-  position: fixed;
-  padding: 0 0.5em;
-  left: 0;
-  bottom: 0;
-  width: 100%;
-}
-
-#giveaway-confirm-btn {
-  border: 2px solid #a82846;
-  background: #85243a;
-  color: white;
-}
-
-#bits-test-container {
-
-}
-
-#sub-test-container {
-
 }

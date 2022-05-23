@@ -1,17 +1,31 @@
+/* The overall body properties of the overlay; the only important aspect of this
+ * is the margin and padding. The background color is ignored by OBS when the
+ * page is loaded as a browser source so this is purely used when looking at the
+ * overlay in a browser. */
 body {
   background-color: #252525;
   margin: 0;
   padding: 0;
 }
 
+/* Items that need to be hidden have this class applied; this sets the opacity
+ * of the item to make the item transparent; that makes it invisible without
+ * removing it from the document flow like display: none does. */
 .hide {
   opacity: 0 !important;
 }
 
+/* While interacting with the overlay portions to shift their locations on
+ * the screen via drag and drop, this class is used to apply a border so
+ * that it's clearer what the dimensions of the moved item are. */
 .border {
   outline: 2px dashed dodgerblue;
 }
 
+/* The viewport container is used to contain the entire content of the overlay;
+ * it ensures that it has no padding or margin, no scroll bars (so items outside
+ * of the viewable area are clipped) and that it fills the entire window area of
+ * the page (or browser source). */
 #viewport {
   position: relative;
   overflow: hidden;
@@ -22,18 +36,27 @@ body {
   height: 100vh;
 }
 
-#text {
-  display: inline-block;
-  font-size: 2em;
-  color: white;
-  background: #181819;
-  padding: 0.5em;
+/* For each displayed name in the bits and subs leaderboards, this class is
+ * applied to the div that wraps the content for that entry and allows it to be
+ * position properly. */
+.gift-box {
+  position: absolute;
+  height: 1.5em;
+  white-space: nowrap;
+  left: 0;
 }
 
+/******************************************************************************/
+/* C O U N T D O W N   C L O C K                                              */
+/******************************************************************************/
+
+/* The container for the countdown clock in the overlay.
+ *
+ * If the font face is changed here, the code at the bottom of overlay.js
+ * also needs to change, so that it preloads the correct font. */
 #countdown-clock {
   position: absolute;
   display:  inline-block;
-  /*border: 1px dashed blue;*/
 
   font-family: 'Orbitron', sans-serif;
   font-size: 2em;
@@ -43,10 +66,25 @@ body {
   opacity: 0;
 }
 
+/* While the countdown clock is paused, this class is applied to the text to
+ * call attention to the fact that the giveaway is currently paused. */
+.pause {
+  color: red !important
+}
+
+/******************************************************************************/
+/* G I F T   S U B   L E A D E R B O A R D                                    */
+/******************************************************************************/
+
+/* This sets the overall properties for the gift sub leader portion of the
+ * overlay, and specifies the font size and default text color for anything that
+ * is not directly styled otherwise.
+ *
+ * If the font face is changed here, the code at the bottom of overlay.js
+ * also needs to change, so that it preloads the correct font. */
 #gifters-subs {
   position: absolute;
   display:  inline-block;
-/*  border: 1px dashed red;*/
 
   min-width: 5em;
 
@@ -57,10 +95,37 @@ body {
   opacity: 0;
 }
 
+/* The style for the header of the leaderboard. */
+#gifters-subs h4 {
+  border-bottom: 1px solid white;
+  margin: 0px 0px 16px 0px;
+}
+
+/* The style applied to the names of people in the gift sub leaderboard. */
+#gifters-subs .name {
+  color: lightgoldenrodyellow;
+}
+
+/* The style applied to the displayed scores for people in the gift sub
+ * leaderboard.*/
+#gifters-subs .score {
+  color: dodgerblue;
+  display: inline-block;
+}
+
+/******************************************************************************/
+/* B I T S   L E A D E R B O A R D                                            */
+/******************************************************************************/
+
+/* This sets the overall properties for the bits gifter portion of the overlay
+ * and specifies the font size and default text color for anything that is not
+ * directly styled otherwise.
+ *
+ * If the font face is changed here, the code at the bottom of overlay.js
+ * also needs to change, so that it preloads the correct font. */
 #gifters-bits {
   position: absolute;
   display:  inline-block;
-  /*border: 1px dashed red;*/
 
   min-width: 5em;
 
@@ -71,41 +136,20 @@ body {
   opacity: 0;
 }
 
-.gift-box {
-  position: absolute;
-  height: 1.5em;
-  white-space: nowrap;
-  left: 0;
-}
-
-#gifters-subs h4 {
-  border-bottom: 1px solid white;
-  margin: 0px 0px 16px 0px;
-}
-
+/* The style for the header of the leaderboard. */
 #gifters-bits h4 {
   border-bottom: 1px solid white;
   margin: 0px 0px 16px 0px;
 }
 
-#gifters-subs .name {
-  color: lightgoldenrodyellow;
-}
-
-#gifters-subs .score {
-  color: dodgerblue;
-  display: inline-block;
-}
-
+/* The style applied to the names of people in the bits gifter leaderboard. */
 #gifters-bits .name {
   color: dodgerblue;
 }
 
+/* The style applied to the displayed scores for people in the bits gifter
+ * leaderboard. */
 #gifters-bits .score {
   color: lightgoldenrodyellow;
   display: inline-block;
-}
-
-.pause {
-  color: red !important
 }

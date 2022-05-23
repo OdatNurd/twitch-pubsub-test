@@ -1,0 +1,29 @@
+/* These classes can be used to apply specific style rules to the contents of
+ * different sections of the test panel as needed. */
+
+/* The section of the page that represents both the currently active giveaway
+ * and also the controls for starting a giveaway, which both share the same
+ * section of the page. */
+#start-giveaway-container {
+
+}
+
+/* The container that contains the controls that allow you to cancel a
+ * currently running giveaway. This contains not just the controls for doing
+ * the cancel, but also the textual warning that reminds you that the operation
+ * cannot be undone. */
+#cancel-giveaway-container {
+  position: fixed;
+  padding: 0 0.5em;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+}
+
+/* Specific styling on the button that confirms the cancellation of a running
+ * giveaway. */
+#giveaway-confirm-btn {
+  border: 2px solid #a82846;
+  background: #85243a;
+  color: white;
+}
