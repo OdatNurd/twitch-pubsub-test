@@ -19,7 +19,8 @@
         "src/client/panel/index.html",
         "src/client/test/index.html",
         "src/client/overlay/index.html",
-        "src/client/dropgame/index.html"
+        "src/client/dropgame/index.html",
+        "src/client/index.html"
       ],
       "distDir": "./public"
     }

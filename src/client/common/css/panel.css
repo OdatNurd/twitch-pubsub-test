@@ -25,6 +25,18 @@ select, input[type='text'] {
   width: 100%;
 }
 
+.button-link-box {
+/*  border: 1px dashed blue;*/
+
+  display: flex;
+  flex-wrap: nowrap;
+}
+
+.button-link-box a {
+  flex: 1;
+  margin: 2px;
+}
+
 .warning {
   color:  #ff8ca7;
   font-size: 90%;
