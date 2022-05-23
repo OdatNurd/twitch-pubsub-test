@@ -113,7 +113,7 @@ async function enterTwitchChat(twitch) {
     chat.client.onRegister(() => {
       console.log(`Registered with Twitch chat as ${chat.client.currentNick}`);
       if (config.get('chat.presence') === true) {
-        chatSay('Good news everyone, I have arrived!')
+        chatSay(config.get("chat.text.botEnter"))
       }
     }),
 
@@ -142,7 +142,7 @@ async function leaveTwitchChat() {
   }
 
   if (config.get('chat.presence') === true) {
-    await chatDo('peaces out');
+    await chatDo(config.get("chat.text.botLeave"));
   }
 
 
@@ -206,8 +206,15 @@ async function chatAnnounce(text) {
     return;
   }
 
+  // For reasons that are currently mysterious and unknown, the announce  API
+  // endpoint here doesn't actually do anything (including throwing an error).
+  // The same thing does not happen in ObotNurd, which CAN make  announcements,
+  // so I'm not sure what the deal is. For the time being,  this will use the
+  // action command instead, which is more visible and distinct from normal chat
+  // messages.
   console.log(`ANNOUNCE:*${chat.channel}* ${text}`);
-  return chat.client.announce(chat.channel, text);
+  // return chat.client.announce(chat.channel, text);
+  return chat.client.action(chat.channel, text);
 }
 
 

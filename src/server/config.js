@@ -168,6 +168,52 @@ const config = convict({
       format: Boolean,
       env: 'TWITCHLOYALTY_GIVEAWAY_END_ANNOUNCE',
       default: true
+    },
+
+    // If announcements are turned on, these represent the messages that will
+    // be used to make the announcement.
+    text: {
+      botEnter: {
+        doc: 'The text to send to the chat whenever the bot enters the chat',
+        format: '*',
+        env: 'TWITCHLOYALTY_CHAT_ANNOUNCE_ENTER',
+        default: 'this would work better if this was configured properly'
+      },
+
+      botLeave: {
+        doc: 'The text to send to the chat whenever the bot leaves the chat',
+        format: '*',
+        env: 'TWITCHLOYALTY_CHAT_ANNOUNCE_EXIT',
+        default: 'this would work better if this was configured properly'
+      },
+
+      giveawayStart: {
+        doc: 'The text to send to the chat whenever a giveaway starts',
+        format: '*',
+        env: 'TWITCHLOYALTY_GIVEAWAY_START_TEXT',
+        default: 'this would work better if this was configured properly'
+      },
+
+      giveawayEnd: {
+        doc: 'The text to send to the chat whenever a giveaway ends',
+        format: '*',
+        env: 'TWITCHLOYALTY_GIVEAWAY_END_TEXT',
+        default: 'this would work better if this was configured properly'
+      },
+
+      giveawayPause: {
+        doc: 'The text to send to the chat whenever a giveaway pauses',
+        format: '*',
+        env: 'TWITCHLOYALTY_GIVEAWAY_PAUSE_TEXT',
+        default: 'this would work better if this was configured properly'
+      },
+
+      giveawayResume: {
+        doc: 'The text to send to the chat whenever a giveaway resumes',
+        format: '*',
+        env: 'TWITCHLOYALTY_GIVEAWAY_UNPAUSE_TEXT',
+        default: 'this would work better if this was configured properly'
+      },
     }
   },
 

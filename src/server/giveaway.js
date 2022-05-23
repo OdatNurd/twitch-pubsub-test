@@ -246,7 +246,7 @@ async function startGiveaway(db, req, res) {
   resumeCurrentGiveaway(db, req.query.userId, false);
 
   if (config.get('chat.announceStart') === true) {
-    await chatAnnounce('A new giveaway is starting! Use bits and subs to get on the leaderboard and win prizes!');
+    await chatAnnounce(config.get("chat.text.giveawayStart"));
   }
 
   res.json({success: true});
@@ -280,7 +280,7 @@ async function pauseGiveaway(db, req, res) {
   await updateCurrentGiveaway(db)
 
   if (config.get('chat.announcePause') === true) {
-    await chatAnnounce('The giveaway is temporarily on hold, but don\'t worry, we will resume in just a moment');
+    await chatAnnounce(config.get("chat.text.giveawayPause"));
   }
 
   // Let everyone know the new state of the giveaway.
@@ -319,7 +319,7 @@ async function unpauseGiveaway(db, req, res) {
   giveawayTimerTick(db);
 
   if (config.get('chat.announcePause') === true) {
-    await chatAnnounce('The giveaway has resumed! You may now continue your quest to be the best... gifter!');
+    await chatAnnounce(config.get("chat.text.giveawayResume"));
   }
 
   res.json({success: true});
@@ -361,7 +361,7 @@ async function cancelGiveaway(db, req, res) {
   transmitLeaderInfo(true, true);
 
   if (config.get('chat.announceEnd') === true) {
-    await chatAnnounce('The giveaway has ended! Thanks to everyone who participated, now lets get to those prizes!');
+    await chatAnnounce(config.get("chat.text.giveawayEnd"));
   }
 
   res.json({success: true});
