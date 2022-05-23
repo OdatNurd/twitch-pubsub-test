@@ -88,7 +88,7 @@ class CommandDetails {
  * 'parm=value'; these must all occur immediately after the command name and be
  * separated from each other with whitespace.
  *
- * Everything following the command name and the optional paramters is
+ * Everything following the command name and the optional parameters is
  * considered to be the trailing text, and is provided both as a single string
  * of text as well as that same text split into words, since this is a common
  * requirement of a command. */

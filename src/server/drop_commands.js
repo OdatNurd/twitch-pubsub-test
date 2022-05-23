@@ -70,7 +70,7 @@ function receive_drop_result(result, chatSay) {
   // what their score is. This should only happen when someone actively gets
   // a higher score; landing on the target when there's someone there
   // already but their score is higher than yours should have no reaction
-  // whatsoeer.
+  // whatsoever.
   if (result.winner === true) {
     resultMsg = `${result.name} just scored a ${result.score.toFixed(2)} and took the lead`;
   } else {

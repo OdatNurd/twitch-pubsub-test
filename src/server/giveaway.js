@@ -41,7 +41,7 @@ let currentParticipants = undefined;
 
 /* These hold the handles for the debounced calls we make to send off overlay
  * updates as data changes. They're undefined when there is not an update
- * pending and some value otherwise; we initalize them to undefined because the
+ * pending and some value otherwise; we initialize them to undefined because the
  * clearTimeout() call silently drops invalid arguments. */
 let bitsUpdateId = undefined;
 let subsUpdateId = undefined;
@@ -80,7 +80,7 @@ async function updateCurrentGiveaway(db)
 // =============================================================================
 
 
-/* Given a Twitch PubSub message, extract and return an objec that contains the
+/* Given a Twitch PubSub message, extract and return an object that contains the
  * information about the user that sent the message; this will always include
  * the userId and the userName, and can optionally include the display name. */
 function getMsgUser(msg) {
@@ -407,7 +407,7 @@ async function resumeCurrentGiveaway(db, userId, autoPause) {
   currentGiveaway = entry;
   // console.dir(entry)
 
-  // The list of people that have giften in this giveaway already (if any) is
+  // The list of people that have gifted in this giveaway already (if any) is
   // a part of the object; pull it out and remove it from the object, since
   // we use other means to update it.
   const users = currentGiveaway.Gifter;

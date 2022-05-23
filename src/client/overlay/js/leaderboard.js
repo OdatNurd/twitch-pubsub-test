@@ -191,7 +191,7 @@ function rearrangeRemainingUsers(board, leaderboard, current_leaderboard, eligib
  * leaderboard display, but which are currently not, and animate them into
  * position.
  *
- * It assumes that the visial space for each item being added has been made by
+ * It assumes that the vial space for each item being added has been made by
  * kicking people out of the list and/or rearranging people into a better
  * position. */
 function addNewUsers(board, leaderboard, current_leaderboard, eligible_partipants, update_map, dimensions, parent_timeline) {

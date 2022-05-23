@@ -329,6 +329,13 @@ async function setup() {
 // =============================================================================
 
 
+/* Preload any google fonts that we're using in the page; once all of the fonts
+ * are successfully loaded, the setup() function will be invoked to do any final
+ * setup.
+ *
+ * When changing a font here, you may also need to change the associated CSS in
+ * the overlay.css file, since that is what specifies the actual font faces to
+ * be used. */
 WebFont.load({
   google: {
     families: ['Orbitron:900', 'Montserrat:600', 'Roboto:500']
