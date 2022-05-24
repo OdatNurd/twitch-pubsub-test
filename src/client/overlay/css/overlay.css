@@ -100,7 +100,7 @@ body {
 
   font-family: 'Montserrat', sans-serif;
   font-size: 2em;
-  background-color: rgba(239,180,35,0.4);
+  background-color: rgba(239,180,35,0.6);
   color: white;
 
   border-radius: 5px 32px;
@@ -149,7 +149,7 @@ body {
 
   font-family: 'Roboto', sans-serif;
   font-size: 2em;
-  background-color: rgba(186,47,39,0.5);
+  background-color: rgba(186,47,39,0.7);
   color: white;
 
   border-radius: 32px 5px;
