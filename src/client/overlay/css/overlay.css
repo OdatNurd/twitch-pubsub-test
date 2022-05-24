@@ -67,6 +67,9 @@ body {
   font-size: 2em;
   color: white;
 
+  background-color: rgba(145,71,255,0.7);
+  border-radius: 16px;
+
   padding: 0.5em;
   opacity: 0;
 }
