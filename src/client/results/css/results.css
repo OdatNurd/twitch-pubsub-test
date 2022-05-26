@@ -1,0 +1,81 @@
+/* For each displayed name in the bits and subs leaderboards, this class is
+ * applied to the div that wraps the content for that entry and allows it to be
+ * position properly. */
+.gift-box {
+  height: 1.5em;
+}
+
+/******************************************************************************/
+/* C O U N T D O W N   C L O C K                                              */
+/******************************************************************************/
+
+/* The container for the countdown clock in the panel. */
+#clock-container {
+  padding: 16px 16px 0 16px;
+}
+
+/* The header that contains the countdown information for the current giveaway,
+ * when one is running. */
+#countdown-clock {
+}
+
+/* While the countdown clock is paused, this class is applied to the text to
+ * call attention to the fact that the giveaway is currently paused. */
+.pause {
+  color: red !important
+}
+
+/******************************************************************************/
+/* G I F T   S U B   L E A D E R B O A R D                                    */
+/******************************************************************************/
+
+/* This sets the overall properties for the gift sub leader portion of the
+ * panel. */
+#gifters-subs {
+  padding: 16px 16px 0 16px;
+}
+
+/* The style for the header of the leaderboard. */
+#gifters-subs h4 {
+  border-bottom: 1px solid white;
+  margin: 0px 0px 16px 0px;
+}
+
+/* The style applied to the names of people in the gift sub leaderboard. */
+#gifters-subs .name {
+  color: lightgoldenrodyellow;
+}
+
+/* The style applied to the displayed scores for people in the gift sub
+ * leaderboard.*/
+#gifters-subs .score {
+  color: dodgerblue;
+  display: inline-block;
+}
+
+/******************************************************************************/
+/* B I T S   L E A D E R B O A R D                                            */
+/******************************************************************************/
+
+/* This sets the overall properties for the bits gifter portion of the panel.*/
+#gifters-bits {
+  padding: 16px 16px 0 16px;
+}
+
+/* The style for the header of the leaderboard. */
+#gifters-bits h4 {
+  border-bottom: 1px solid white;
+  margin: 0px 0px 16px 0px;
+}
+
+/* The style applied to the names of people in the bits gifter leaderboard. */
+#gifters-bits .name {
+  color: dodgerblue;
+}
+
+/* The style applied to the displayed scores for people in the bits gifter
+ * leaderboard. */
+#gifters-bits .score {
+  color: lightgoldenrodyellow;
+  display: inline-block;
+}
