@@ -247,7 +247,7 @@ function addNewUsers(board, leaderboard, current_leaderboard, eligible_partipant
     return div;
   });
 
-  parent_timeline.from(animList, { duation: 1, ease: "elastic.out(1, 0.3)", opacity: 0, x: 200, stagger: 0.50 });
+  parent_timeline.from(animList, { duration: 1, ease: "elastic.out(1, 0.3)", opacity: 0, x: 200, stagger: 0.50 });
 }
 
 
@@ -257,7 +257,7 @@ function addNewUsers(board, leaderboard, current_leaderboard, eligible_partipant
 /* Update the leaderboard of the given type using the items provided; new items
  * will be added to the element provides. */
 function updateLeaderboard(giftBox, board, headerWidth, dimensions, current_leaderboard, display_size, updated_data) {
-  console.log(`updateLeaderboard(${headerWidth})`);
+  // console.log(`updateLeaderboard(${headerWidth})`);
   // console.log(JSON.stringify(current_leaderboard, null, 2));
 
   // Create a timeline that will contain all of the animations that we're going

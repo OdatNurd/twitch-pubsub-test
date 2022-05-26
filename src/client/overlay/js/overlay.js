@@ -3,6 +3,7 @@
 
 const getConfig = require('../../common/js/config');
 const { getWebSocket } = require('../../common/js/websocket');
+const { remainingDuration, giveawayRunning } = require('../../common/js/utils');
 
 const { resizeGifterHeader, updateLeaderboard, placeHolderHTML } = require('./leaderboard');
 import { gsap } from 'gsap';
@@ -61,16 +62,23 @@ const bitListBox = document.getElementById('bit-list');
 let subListDim = undefined;
 let bitListDim = undefined;
 
-/* The status of the currently active giveaway (if any); this tracks things like
- * the duration and the elapsed time. */
-let currentGiveaway = undefined;
+/* This contains all of the details on the most recently created giveaway; this
+ * might be a giveaway that's currently in operation OR it might be a giveaway
+ * that ended last week. The fields inside let you know the full status.
+ *
+ * This will be an empty object if no giveaway has ever been started (i.e. the
+ * database is empty) or if there isn't an authorized Twitch user (in which case
+ * no giveaways can be created at all). */
+let giveaway = {};
 
-/* The list of people that are on the bits and subs leaderboards; when they are
- * undefined, there is not currently anyone in that list. When defined, the list
- * is an array of the update objects that make up that leaderboard, in the order
- * in which the items appear there. */
-let bitsLeaders = undefined;
-let subsLeaders = undefined;
+/* These lists contain the people that are currently displayed in the bits and
+ * subs leaderboards; the arrays are empty when there are no participants of
+ * that type in the giveaway, or when there is no giveaway.
+ *
+ * In all other cases the array contains a set of sorted user records that say
+ * who the person is and how many bits or subs they have gifted. */
+let bitsLeaders = [];
+let subsLeaders = [];
 
 
 // =============================================================================
@@ -254,6 +262,164 @@ function setupOverlays(overlays, socket) {
 
 }
 
+
+// =============================================================================
+
+
+/* This handles an authorization event update from the back end, which tells us
+ * when a user either authorizes the panel or removes existing authorization.
+ *
+ * For our purposes here in the overlay, we only need to handle making the
+ * contents of the overlay hidden or visible; we don't care about the
+ * authorization per se. */
+function handleAuthUpdate(authData) {
+  const overlayComponents = [countdownTxt, gifterSubBox, gifterBitsBox];
+  const opacity = authData.authorized === false ? 0 : 1;
+
+  gsap.to(overlayComponents, { opacity, duration: 1 });
+}
+
+
+// =============================================================================
+
+
+/* This will set the giveaway information provided as the currently known
+ * giveaway, and will then update the elapsed time as appropriate for this
+ * information.
+ *
+ * This gets invoked every time the underlying data on the giveaway changes;
+ * this can happen in the following ways:
+ *   - We connect to the back end, and it sends us the current into
+ *   - The user deauthorizes the application for their channel
+ *   - The user authorizes themselves with Twitch
+ *   - A brand new giveaway starts
+ *
+ * The giveaway variable contains the fields that tell us about the giveaway
+ * we're tracking; a giveaway can either be running or not. Here "running" means
+ * that the giveaway is not cancelled and has some time remaining on it (pause
+ * state does not matter).
+ *
+ * The giveaway variable is an empty object if we don't know about any giveaway,
+ * such as when the database is completely empty or the user is not authorized.
+ * In all other cases it has some giveaway data in it, even if it's not a
+ * current one. */
+function setGiveawayInformation(newGiveawayData) {
+  // Keep this information as the current giveaway; this update always comes
+  // from a 'giveaway-info' event, which is always considered to be gospel.
+  giveaway = newGiveawayData;
+
+  // Since many states in here need to make sure that the pause state is turned
+  // off, turn it off by default and then we only need to turn it on if the
+  // giveaway is actually paused.
+  countdownTxt.classList.remove('pause');
+
+  // If the object that we got is empty, then there's no information on any
+  // particular giveaway, either past or present. In that case the remaining
+  // duration should say that there's not any giveaway yet.
+  //
+  // The same situation also applies if there's no authorized user to create a
+  // new giveaway.
+  if (Object.keys(giveaway).length === 0) {
+    countdownTxt.innerText = 'No giveaway yet; hold tight!';
+    return;
+  }
+
+  // The giveaway that we're storing must have some information; if it's not a
+  // currently running giveaway, then set in a placeholder for that.
+  //
+  // This covers the state changes for being cancelled by the streamer as well
+  // as a duration change that caused the giveaway to expend it's entire elapsed
+  // time.
+  if (giveawayRunning(giveaway) === false) {
+    countdownTxt.innerText = 'The giveaway has ended!';
+    return;
+  }
+
+  // If we get here, the state change is telling us either that the duration
+  // changed or that the pause state changed. In either case, update the display
+  // as appropriate.
+  countdownTxt.innerText = `${humanize(giveaway.duration - giveaway.elapsedTime)} remaining`;
+
+  if (giveaway.paused) {
+    countdownTxt.classList.add('pause');
+  }
+}
+
+
+// =============================================================================
+
+
+/* This handles a tick of giveaway information, which only triggers when the
+ * state of a giveaway we've previously been told about changes. We respond to
+ * this by making sure that the various parts of the overlay are tracking as
+ * expected. */
+function handleGiveawayTick(newGiveawayData) {
+  // This gets sent whenever the state of a giveaway whose information we got
+  // via a giveaway-info event changes state, such as pausing, resuming,
+  // time changing, etc.
+  //
+  // Don't be a total maroon this time, this carries new state directly, so do
+  // NOT try to compare it against the current information.
+  giveaway = newGiveawayData;
+
+  // Since many states in here need to make sure that the pause state is turned
+  // off, turn it off by default and then we only need to turn it on if the
+  // giveaway is actually paused.
+  countdownTxt.classList.remove('pause');
+
+  // If the giveaway is no longer running (because it was cancelled or it
+  // expired), then we can set the countdown text and we're done.
+  if (giveawayRunning(giveaway) === false) {
+    countdownTxt.innerText = 'The giveaway has ended!';
+    return;
+  }
+
+  countdownTxt.innerText = `${humanize(giveaway.duration - giveaway.elapsedTime)} remaining`;
+  if (giveaway.paused) {
+    countdownTxt.classList.add('pause');
+  }
+}
+
+
+// =============================================================================
+
+
+/* This handles an update from the back end telling us that the participants in
+ * one of the leaderboards has changed. This can trigger for both bits and subs
+ * and both are handled the same way other than being visualized in different
+ * containers in the page.
+ *
+ * Updates are assumed to be either a list of people that have participated or
+ * an empty list, if the list of participants has been cleared away (such as
+ * when a new giveaway starts). */
+function handleParticipantUpdate(config, eventName, updateData) {
+  switch(eventName) {
+    case 'bits':
+      if (updateData.length === 0) {
+        bitListBox.innerHTML = placeHolderHTML('bits');
+        bitsLeaders = [];
+        return resizeGifterHeader(gifterBitsBox, subGifterHeaderMinWidth);
+      }
+
+      bitsLeaders = updateLeaderboard(gifterBitsBox, bitListBox, bitGifterHeaderMinWidth, bitListDim, bitsLeaders, config.bitsLeadersCount, updateData);
+      break;
+
+    case 'subs':
+      if (updateData.length === 0) {
+        subListBox.innerHTML = placeHolderHTML('subs');
+        subsLeaders = [];
+        return resizeGifterHeader(gifterSubBox, bitGifterHeaderMinWidth);
+      }
+
+      subsLeaders = updateLeaderboard(gifterSubBox, subListBox, subGifterHeaderMinWidth, subListDim, subsLeaders, config.subsLeadersCount, updateData);
+      break;
+  }
+}
+
+
+// =============================================================================
+
+
 /* Set up everything in the overlay. This initializes the state of everything,
  * ensures that we're connected to the back end socket server, and sets up the
  * appropriate handlers for knowing when key events occur. */
@@ -276,39 +442,52 @@ async function setup() {
   // components.
   setupOverlays(config.overlays, socket);
 
-  // When the information on the current giveaway changes, take an action; this
-  // triggers when  a new giveaway starts, one ends, or the pause state changes.
-  socket.on("giveaway-info", data => {
-    // Set up our current giveaway to track the incoming data.
-    currentGiveaway = Object.keys(data).length === 0 ? undefined : data;
-    if (currentGiveaway === undefined) {
-      bitsLeaders = undefined;
-      subsLeaders = undefined;
+  // This event triggers whenever the authorization state changes in the overlay
+  // to either say someone is authorized, or remove their authorization and go
+  // back to a default state.
+  //
+  // We need to handle this specifically because if the user removes their
+  // authorization, the overlay needs to remove any displayed data; the back end
+  // won't provide an update to us in that case since the auth message tells us.
+  socket.on("twitch-auth", data => {
+    console.log('twitch-auth', data);
 
-      bitListBox.innerHTML = placeHolderHTML('bits');
-      subListBox.innerHTML = placeHolderHTML('subs');
-      resizeGifterHeader(gifterBitsBox, subGifterHeaderMinWidth);
-      resizeGifterHeader(gifterSubBox, bitGifterHeaderMinWidth);
-    }
-
-    if (currentGiveaway !== undefined) {
-      gsap.to(countdownTxt, { opacity: 1, duration: 1 });
-      gsap.to(gifterSubBox, { opacity: 1, duration: 1 });
-      gsap.to(gifterBitsBox, { opacity: 1, duration: 1 });
-    }
-
-    if (currentGiveaway === undefined) {
-      gsap.to(countdownTxt, { opacity: 0, duration: 1 });
-      gsap.to(gifterSubBox, { opacity: 0, duration: 1 });
-      gsap.to(gifterBitsBox, { opacity: 0, duration: 1 });
-    }
-
-    if (data.paused) {
-      countdownTxt.classList.add('pause');
-    } else {
-      countdownTxt.classList.remove('pause');
-    }
+    handleAuthUpdate(data)
   });
+
+  // This event triggers to give us information about a giveaway, which can be
+  // either a past one or an ongoing one, or it can tell us that there is no
+  // giveaway information to display as well, such as if there has never been
+  // a giveaway or there's not an authorized user.
+  socket.on("giveaway-info", data => {
+    console.log('giveaway-info', data);
+
+    // Use this information to set the information for the giveaway we're
+    // tracking and update the overlay as appropriate.
+    setGiveawayInformation(data);
+  });
+
+  // This event triggers whenever any state changes in a giveaway that we have
+  // been told about in a giveawy-info event, such as time expiring, the
+  // giveaway ending, pause, resume or cancel, etc.
+  socket.on("giveaway-tick", data => {
+    // console.log('giveaway-tick', data);
+
+    handleGiveawayTick(data);
+  });
+
+  // The events that track updates to the bits and subs leaderboard data always
+  // send us an array, even if it might be empty. The array will be empty if
+  // there has never been a giveaway, the user is not authorized to start one,
+  // or a new fresh giveaway just started.
+  //
+  // If the array has any items in it at all, it's because of a state change in
+  // the peopl;e that are participating in the giveaway.
+  //
+  // For both of these events we take the same actions, except that the list of
+  // participants and the container that wraps them are different.
+  socket.on('leaderboard-bits-update', data => handleParticipantUpdate(config, 'bits', data));
+  socket.on('leaderboard-subs-update', data => handleParticipantUpdate(config, 'subs', data));
 
   // When we're told that an overlay moved, react to it. Currently this will
   // foolishly update the overlay item that caused this event to trigger, but
@@ -316,21 +495,6 @@ async function setup() {
   // stress about it.
   socket.on('overlay-moved', data => {
     moveOverlay(data);
-  });
-
-  // When the duration of the giveaway changes, update things.
-  socket.on("giveaway-tick", data => {
-    countdownTxt.innerText = `${humanize(data.duration - data.elapsedTime)} remaining`;
-  });
-
-  // Update the bits leaderboard when a new message comes in.
-  socket.on('leaderboard-bits-update', data => {
-    bitsLeaders = updateLeaderboard(gifterBitsBox, bitListBox, bitGifterHeaderMinWidth, bitListDim, bitsLeaders, config.bitsLeadersCount, data);
-  });
-
-  // Update the subs leaderboard when a new message comes in.
-  socket.on('leaderboard-subs-update', data => {
-      subsLeaders = updateLeaderboard(gifterSubBox, subListBox, subGifterHeaderMinWidth, subListDim, subsLeaders, config.subsLeadersCount, data);
   });
 }
 
