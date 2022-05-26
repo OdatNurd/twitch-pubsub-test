@@ -217,7 +217,7 @@ function transmitLeaderInfo(bits, subs, socket) {
       bitsUpdate();
     } else {
       clearTimeout(bitsUpdateId)
-      bitsUpdateId = setTimeout(() => bitsUpdate(), 1000);
+      bitsUpdateId = setTimeout(() => bitsUpdate(), 5000);
     }
   }
 
@@ -228,7 +228,7 @@ function transmitLeaderInfo(bits, subs, socket) {
       subUpdate();
     } else {
       clearTimeout(subsUpdateId)
-      subsUpdateId = setTimeout(() => subUpdate(), 1000);
+      subsUpdateId = setTimeout(() => subUpdate(), 5000);
     }
   }
 }
