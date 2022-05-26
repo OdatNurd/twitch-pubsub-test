@@ -318,7 +318,7 @@ async function startGiveaway(db, req, res) {
 
       duration: parseInt(req.query.duration),
       elapsedTime: 0,
-      paused: false,
+      paused: true,
       cancelled: false
     }
   });
