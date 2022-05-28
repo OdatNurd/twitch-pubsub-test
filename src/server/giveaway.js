@@ -115,8 +115,19 @@ let lastTickTime = 0;
  * this run. Before we start a timer, this is always set to the current time. */
 let lastSyncTime = 0;
 
+/* Whenever a Twitch authorization or deauthorization happens, we catch the
+ * event and set this to the twitch object the event provides, which will either
+ * have information on the authorized user as well as the API handles needed to
+ * make request, or will be an empty object, depending. */
+let twitchInfo = {};
+
 /* Get the remaining duration on the current giveaway. */
 const remainingDuration = () => giveaway ? giveaway.duration - giveaway.elapsedTime : undefined;
+
+/* Some helper functions for sending results of queries back to the initiating
+ * client end. */
+const success = res => res.json({ success: true });
+const error = (res, reason) => res.json({ success: false, reason })
 
 
 // =============================================================================
@@ -301,7 +312,7 @@ async function startGiveaway(db, req, res) {
   // Pull the ripcord if somehow this gets called when there's already a
   // giveaway in progress.
   if (giveawayRunning() === true) {
-    return;
+    return error(res, 'no giveaway is currently running');
   }
 
   // Insert into the database a new giveaway for the user provided that is
@@ -332,7 +343,7 @@ async function startGiveaway(db, req, res) {
     await chatAnnounce(config.get("chat.text.giveawayStart"));
   }
 
-  res.json({success: true});
+  success(res);
 }
 
 
@@ -347,7 +358,7 @@ async function pauseGiveaway(db, req, res) {
   // Pull the ripcord if somehow this gets called when there's not already a
   // giveaway in progress, or if there is but it's paused already.
   if (giveawayRunning() === false || giveaway.paused === true) {
-    return;
+    return error(res, 'no giveaway is currently running, or it is already paused');
   }
 
   console.log(`Giveaway: Pausing giveaway (${humanize(remainingDuration())} remaining)`);
@@ -368,7 +379,7 @@ async function pauseGiveaway(db, req, res) {
 
   // Let everyone know the new state of the giveaway.
   broadcastSocketMessage('giveaway-tick', giveaway);
-  res.json({success: true});
+  success(res);
 }
 
 
@@ -383,7 +394,7 @@ async function unpauseGiveaway(db, req, res) {
   // Pull the ripcord if somehow this gets called when there's not already a
   // giveaway in progress, or if there is but it's not currently paused.
   if (giveawayRunning() === false || giveaway.paused === false) {
-    return;
+    return error(res, 'no giveaway is currently running, or it is already paused');
   }
 
   console.log(`Giveaway: Resuming giveaway (${humanize(remainingDuration())} remaining)`);
@@ -405,7 +416,7 @@ async function unpauseGiveaway(db, req, res) {
     await chatAnnounce(config.get("chat.text.giveawayResume"));
   }
 
-  res.json({success: true});
+  success(res);
 }
 
 
@@ -420,7 +431,7 @@ async function cancelGiveaway(db, req, res) {
   // Pull the ripcord if somehow this gets called when there's not already a
   // giveaway in progress.
   if (giveawayRunning() === false) {
-    return;
+    return error(res, 'no giveaway is currently running');
   }
 
   console.log(`Giveaway: Cancelling giveaway (${humanize(remainingDuration())} remaining)`);
@@ -442,7 +453,7 @@ async function cancelGiveaway(db, req, res) {
     await chatAnnounce(config.get("chat.text.giveawayEnd"));
   }
 
-  res.json({success: true});
+  success(res);
 }
 
 
@@ -563,12 +574,129 @@ async function suspendCurrentGiveaway(db) {
 // =============================================================================
 
 
+/* Attempt to adjust the duration of a giveaway, if one is running. The request
+ * expects a duration in milliseconds to add to or remove from the duration of
+ * the running giveaway.
+ *
+ * This will adjust the duration of the giveaway by the value given and update
+ * the database. If the duration update would cause the giveaway to end (such as
+ * taking the duration or the remaining time negative), then nothing happens
+ * and the request is ignored. */
+async function adjustGiveaway(db, req, res) {
+  // Pull the ripcord if somehow this gets called when there's not a
+  // giveaway in progress.
+  if (giveawayRunning() === false) {
+    return error(res, 'no giveaway is currently running');
+  }
+
+  // The value we get is a string; convert it into an integer.
+  const reqDuration = parseInt(req.query.duration, 10);
+
+  // Insert into the database a new giveaway for the user provided that is
+  // flagged to start at the current time and use the given duration; it starts
+  // as non-paused and can in theory be for any user and not necessarily the
+  // currently authorized one (if any).
+  console.log(`Giveaway: Adjusting giveaway duration (${humanize(reqDuration)})`);
+
+  // The incoming duration is only valid if, after applying it to the existing
+  // data, the total duration isn't negative and the combination of the duration
+  // and the currenty elapsed time doesn't mean that the giveaway suddenly ends.
+  //
+  // In those cases, we can leave; if you want to cancel a giveaway, there's an
+  // API for that.
+  const newDuration = giveaway.duration + reqDuration;
+
+  if (newDuration < 0 || newDuration - giveaway.elapsedTime <= 0) {
+    console.log(`Giveaway: Adjustment is not valid; would end the giveaway`);
+    return error(res, 'the duration adjustment is invalid');
+  }
+
+  // Update the giveaway duration and flush it to the database.
+  giveaway.duration = newDuration;
+  await updateCurrentGiveaway(db);
+
+  // If the giveaway is currently paused, then transmit a tick message right now
+  // so that the other end knows that the duration changed. If the giveaway
+  // isn't paused, the timer is going to send an update shortly anyway.
+  if (giveaway.paused === true) {
+    broadcastSocketMessage('giveaway-tick', giveaway);
+  }
+
+  success(res);
+}
+
+
+// =============================================================================
+
+
+/* Attempt to adjust the number of bits or subs that a particular user has
+ * participated with in the current giveaway.
+ *
+ * This will attempt to look up the user information for the passed in user so
+ * that it can simulate an incoming update. If the user is invalid, nothing
+ * happens.
+ *
+ * This can only adjust bits and sub numbers upwards; you can't take them away
+ * at the current time. */
+async function adjustParticipant(db, req, res) {
+  // Pull the ripcord if somehow this gets called when there's not a
+  // giveaway in progress.
+  if (giveawayRunning() === false) {
+    return error(res, 'no giveaway is currently running');
+  }
+
+  // In order to do anything we're going to need to make a request to Twitch;
+  // if we don't have a twitch object, this can't happen.
+  if (twitchInfo.userInfo === undefined) {
+    return error(res, 'the overlay is not authorized for twitch; cannot look up user information');
+  }
+
+  // Grab out all of the values and convert them as needed.
+  const userName = req.query.userName;
+  const bits = parseInt(req.query.bits, 10) || 0;
+  const subs = parseInt(req.query.subs, 10) || 0;
+
+  // Insert into the database a new giveaway for the user provided that is
+  // flagged to start at the current time and use the given duration; it starts
+  // as non-paused and can in theory be for any user and not necessarily the
+  // currently authorized one (if any).
+  console.log(`Giveaway: Adjusting gifter data (${userName}, bits+=${bits}, subs+=${subs})`);
+
+  // Try to get the user info for the given user; this might fail if the name is
+  // not valid.
+  const userInfo = await twitchInfo.api.users.getUserByName(userName);
+  if (userInfo === null) {
+    console.log(`Unable to find a user named ${userName}`);
+    return error(res, `unable to find Twitch user ${userName}`);
+  }
+
+  // Synthesize an update call to make it appear as if this person has given the
+  // provided number of bits and subs.
+  const updateUser = {
+    userId: userInfo.id,
+    userName: userInfo.name,
+    displayName: userInfo.displayName
+  }
+  await updateGifterInfo(db, twitchInfo, updateUser, bits, subs, true);
+
+  success(res);
+}
+
+// =============================================================================
+
+
 /* This sets up the giveaway handling for the overlay, which encompasses both
  * figuring out at startup if there is a current giveaway as well as sending out
  * messages regarding giveaway events as they occur. */
 function setupGiveawayHandler(db, app, bridge) {
-  bridge.on('twitch-authorize', twitch => resumeCurrentGiveaway(db, twitch.userInfo.id, true));
-  bridge.on('twitch-deauthorize', twitch => suspendCurrentGiveaway(db));
+  bridge.on('twitch-authorize', twitch => {
+    twitchInfo = twitch;
+    resumeCurrentGiveaway(db, twitch.userInfo.id, true);
+  });
+  bridge.on('twitch-deauthorize', twitch => {
+    twitchInfo = twitch;
+    suspendCurrentGiveaway(db);
+  });
 
   // Set up the routes that allow the controls in the main panel to manipulate
   // the current giveaway state.
@@ -576,6 +704,8 @@ function setupGiveawayHandler(db, app, bridge) {
   app.get('/giveaway/pause', (req, res) => pauseGiveaway(db, req, res));
   app.get('/giveaway/unpause', (req, res) => unpauseGiveaway(db, req, res));
   app.get('/giveaway/cancel', (req, res) => cancelGiveaway(db, req, res));
+  app.get('/giveaway/adjust', (req, res) => adjustGiveaway(db, req, res));
+  app.get('/participant/adjust', (req, res) => adjustParticipant(db, req, res));
 
   // Every time a new socket connects to the server, send it a message to tell
   // it the state of the current giveaway, if any.
@@ -604,13 +734,13 @@ function setupGiveawayHandler(db, app, bridge) {
  * This will add a new user to the gifters list for the current giveaway if the
  * user isn't already in the list, and it also makes sure to update both the
  * in memory cache as well as the database. */
-async function updateGifterInfo(db, twitch, user, bits, subs) {
-  console.log(`updateGifterInfo(${user.userId}/${user.userName}/${user.displayName}, ${bits}, ${subs})`);
+async function updateGifterInfo(db, twitch, user, bits, subs, force) {
+  console.log(`updateGifterInfo(${user.userId}/${user.userName}/${user.displayName}, ${bits}, ${subs}, ${force})`);
 
   // If there's not a giveaway running or there is but it's currently paused,
   // then we don't want to do anything with this message; messages should only
   // count when the giveaway is actively running.
-  if (giveawayRunning() === false || giveaway.paused === true) {
+  if ((giveawayRunning() === false || giveaway.paused === true) && force === false) {
     console.log(`Giveaway: Rejecting update; giveaway is not currently running`);
     return;
   }
@@ -770,7 +900,7 @@ async function handlePubSubSubscription(db, twitch, msg) {
   }
 
   // Track this as a gift sub for the gifting user.
-  await updateGifterInfo(db, twitch, getMsgUser(msg), 0, 1);
+  await updateGifterInfo(db, twitch, getMsgUser(msg), 0, 1, false);
 
   // broadcastSocketMessage('twitch-sub', {
   //   gifterDisplayName: msg.gifterDisplayName,
@@ -804,7 +934,7 @@ async function handlePubSubBits(db, twitch, msg) {
   }
 
   // Track this as addition bits for this particular user.
-  await updateGifterInfo(db, twitch, getMsgUser(msg), msg.bits, 0);
+  await updateGifterInfo(db, twitch, getMsgUser(msg), msg.bits, 0, false);
 
   // broadcastSocketMessage('twitch-bits', {
   //   bits: msg.bits,

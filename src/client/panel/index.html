@@ -20,6 +20,22 @@
     <button id="giveaway-start-btn" disabled>Start Giveaway</button>
   </div>
 
+  <div id="modify-giveaway-container">
+    <h3>Adjust Giveaway Properties</h3>
+    <input id="adjust-giveaway-duration" type="text" placeholder="Adjust duration (-1hr, 1hr, ...)" value="" disabled>
+    <button id="adjust-giveaway-duration-btn" disabled>Adjust Giveaway Time</button>
+  </div>
+
+  <div id="modify-participant-container">
+    <h3>Adjust Participant Properties</h3>
+    <div  class="adjuster">
+      <input id="adjust-participant-name" type="text" placeholder="Twitch User" value="" disabled>
+      <input id="adjust-participant-bits" type="text" placeholder="Bits" value="" disabled>
+      <input id="adjust-participant-subs" type="text" placeholder="Subs" value="" disabled>
+    </div>
+    <button id="adjust-participant-btn" disabled>Add Bits and Subs</button>
+  </div>
+
   <div id="cancel-giveaway-container">
     <h3>Cancel Giveaway</h3>
     <p id="warning" class="warning hidden">This operation cannot be undone!</p>

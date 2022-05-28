@@ -66,6 +66,19 @@ select, input[type='text'] {
   margin: 2px;
 }
 
+
+/* In some of the panels we want to be able to display several input fields
+ * together in a single row. These classes allow for wrapping such fields in
+ * order to get the display that we want. */
+.adjuster {
+  display: flex;
+  flex-wrap: nowrap;
+}
+
+.adjuster input:not(:last-child) {
+  margin-right: 4px;
+}
+
 /* When displaying warnings in panels (for example, when cancelling a running
  * giveaway) this sets the properties of the warning text. */
 .warning {

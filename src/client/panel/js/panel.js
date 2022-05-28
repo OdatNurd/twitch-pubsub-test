@@ -43,6 +43,18 @@ const cancelBtn = document.getElementById('giveaway-cancel-btn');
 const warningTxt = document.getElementById('warning');
 const confirmBtn = document.getElementById('giveaway-confirm-btn');
 
+/* The panel controls that relate to adjusting an existing giveaway's duration
+ * by allowing the streamer to add or remove time from the giveaway. */
+const adjGiveawayFld = document.getElementById('adjust-giveaway-duration');
+const adjGiveawayBtn = document.getElementById('adjust-giveaway-duration-btn');
+
+/* The panel controls that relate to adjusting the number of bits and subs
+ * for a specific user. */
+const adjUserNameFld = document.getElementById('adjust-participant-name');
+const adjUserBitsFld = document.getElementById('adjust-participant-bits');
+const adjUserSubsFld = document.getElementById('adjust-participant-subs');
+const adjUserBtn = document.getElementById('adjust-participant-btn');
+
 /* The user that is currently authorized (if any); the data that's sent up to
  * us about giveaways and the data that is associated with them associates with
  * this user. */
@@ -56,6 +68,22 @@ let user = { authorized: false, userName: undefined } ;
  * In all other cases, this is an object that tells us the properties of the
  * giveaway we're currently visualizing. */
 let giveaway = {};
+
+
+// =============================================================================
+
+
+/* Given some text, try to parse it as an adjustment duration, which is a time
+ * interval in the same form as the parse-duration package that we use, except
+ * with a leading minus sign on it.
+ *
+ * This is here because although the package we're using allows for negative
+ * time values to be parsed, it's weirdly sensitive to whitespace surrounding
+ * the '-' character.
+ *
+ * The return value will be a parsed value in milliseconds (which can be a
+ * negative value) or null if the text could not be parsed. */
+const parseAdjustmentDuration = text => parse(text.replace(/-\s*/g, '-'));
 
 
 // =============================================================================
@@ -100,7 +128,7 @@ const startOrPauseGiveaway = () => {
   // new giveaway be started. We can't be called unless the duration field is a
   // valid duration.
   window.fetch('/giveaway/start?' + new URLSearchParams({
-    duration: parse(durationFld.value),
+    duration: parseAdjustmentDuration(durationFld.value),
     userId: user.userId
   }));
 }
@@ -108,6 +136,106 @@ const startOrPauseGiveaway = () => {
 
 // =============================================================================
 
+
+/* This gets invoked whenever the button for adjusting the duration of a
+ * giveaway is pressed.
+ *
+ * This should only be active when there's an active giveaway (i.e not
+ * cancelled and with some remaining duration) and will send a message to the
+ * back end that will adjust the giveaway parameters; the result of that will
+ * be realized at the next 'giveaway-tick' event. */
+const adjustGiveawayDuration = () => {
+  // Gather the duration out of the duration adjustment field and use it to
+  // request that the duration of the current giveaway be adjusted. On the back
+  // end if this would cause the duration to go negative, it will do nothing.
+  //
+  // Changes to the remaining time will be reflected in the next tick.
+  //
+  // We can't be called unless the duration field is a valid duration.
+  window.fetch('/giveaway/adjust?' + new URLSearchParams({
+    duration: parseAdjustmentDuration(adjGiveawayFld.value)
+  }));
+
+  // Now that we sent off the message, we can clear this value.
+  adjGiveawayFld.value = '';
+}
+
+
+// =============================================================================
+
+
+/* This gets invoked whenever the button for adjusting the parameters of a
+ * giveaway participant is pressed.
+ *
+ * This should only be active when there is a username in the username field,
+ * and the bit and sub fields are numbers or empty, with at least one of them
+ * having a value so that there's something to update.
+ *
+ * If there's not a giveaway running, or the user provided is not a valid twitch
+ * username, nothing happens. */
+const adjustGiveawayParticipant = () => {
+  window.fetch('/participant/adjust?' + new URLSearchParams({
+    userName: adjUserNameFld.value.trim(),
+    bits: adjUserBitsFld.value.trim(),
+    subs: adjUserSubsFld.value.trim(),
+  }));
+
+  // Now that we sent off the message, we can clear the values.
+  adjUserNameFld.value = '';
+  adjUserBitsFld.value = '';
+  adjUserSubsFld.value = '';
+}
+
+
+// =============================================================================
+
+
+/* This performs a validation check on the fields that are used to update the
+ * particpant information for a particular user.
+ *
+ * The button for sending the request will be enabled if all validations pass
+ * and disabled if not.
+ *
+ * To be valid, there needs to be a user name given, as well as a non-zer and
+ * positive number in at least one of the two number fields. If any number field
+ * is 0 or lower or not a number, the validation fails. */
+function validateParicipantAdjustFields() {
+  // adjUserNameFld, adjUserBitsFld, adjUserSubsFld].forEach(field => {
+  // const adjUserBtn = document.getElementById('adjust-participant-btn');
+  let valid = true;
+
+  // The update is not valid if there's no user available for it.
+  if (adjUserNameFld.value.trim() === '') {
+    valid = false;
+  }
+
+  // Convert the bits and subs fields into numbers; this will give us ints or
+  // it will give us NaN if the input isn't valid.
+  let bits = parseInt(adjUserBitsFld.value, 10);
+  let subs = parseInt(adjUserSubsFld.value, 10);
+
+  // If the bits value is NaN and it's content isn't an empty string, then this
+  // is not valid.
+  if ((isNaN(bits) && adjUserBitsFld.value.trim() !== '') ||
+      (isNaN(subs) && adjUserSubsFld.value.trim() !== '')) {
+    valid = false;
+  }
+
+  // The above checks to make sure that each individual field is valid; to
+  // submit the request at least one of them has to not be NaN.
+  if (isNaN(bits) && isNaN(subs)) {
+    valid = false;
+  }
+
+  // One of the values is a number; to be valid it has to be > 0
+  if ((isNaN(bits) === false && bits <= 0) || (isNaN(subs) === false && subs <= 0)) {
+    valid = false;
+  }
+
+  adjUserBtn.disabled = ! valid;
+}
+
+// =============================================================================
 
 /* Alter the portion of the panel that tracks wether or not there is any user
  * that is authorized for the panel. This gets invoked every time the user data
@@ -179,6 +307,22 @@ function setGiveawayInformation(newGiveawayData) {
     // Since there's no giveaway running, the button for cancelling it should
     // be disabled.
     cancelBtn.disabled = true;
+
+    // The user can't adjust the time of a giveaway if there's not one already
+    // running.
+    adjGiveawayFld.value = '';
+    adjGiveawayFld.disabled = true;
+    adjGiveawayBtn.disabled = true;
+
+    // Similarly, since the back end only allows updates when there's a giveaway
+    // in progress, if there isn't one, then you can't adjust squat-doodle.
+    adjUserNameFld.value = '';
+    adjUserNameFld.disabled = true;
+    adjUserBitsFld.value = '';
+    adjUserBitsFld.disabled = true;
+    adjUserSubsFld.value = '';
+    adjUserSubsFld.disabled = true;
+    adjUserBtn.disabled = true;
     return;
   }
 
@@ -201,6 +345,24 @@ function setGiveawayInformation(newGiveawayData) {
   // Regardless of wether the currently active giveaway is running or is
   // just paused, the user should be able to cancel it if they want to.
   cancelBtn.disabled = false;
+
+  // If there's a giveaway, you can adjust the giveaway time and user
+  // properties. The buttons need to be disabled because editing text in the
+  // fields is what causes the buttons to enable, assuming they have valid
+  // input.
+  adjGiveawayFld.value = '';
+  adjUserNameFld.value = '';
+  adjUserBitsFld.value = '';
+  adjUserSubsFld.value = '';
+  adjGiveawayFld.value = '';
+
+  adjGiveawayFld.disabled = false;
+  adjGiveawayBtn.disabled = true;
+  adjUserNameFld.disabled = false;
+  adjUserBitsFld.disabled = false;
+  adjUserSubsFld.disabled = false;
+  adjUserBtn.disabled = true;
+
 }
 
 
@@ -251,6 +413,24 @@ function handleGiveawayTick(newGiveawayData) {
     // Since there's no giveaway running, the button for cancelling it should
     // be disabled.
     cancelBtn.disabled = true;
+
+    // Since there is now no giveaway,. all of the controls for adjusting one
+    // need to be disabled now, just as they would have been at load time.
+    // If there's a giveaway, you can adjust the giveaway time and user
+    // properties. The buttons need to be disabled because editing text in the
+    // fields is what causes the buttons to enable, assuming they have valid
+    // input.
+    adjGiveawayFld.value = '';
+    adjGiveawayFld.disabled = true;
+    adjGiveawayBtn.disabled = true;
+
+    adjUserNameFld.value = '';
+    adjUserNameFld.disabled = true;
+    adjUserBitsFld.value = '';
+    adjUserBitsFld.disabled = true;
+    adjUserSubsFld.value = '';
+    adjUserSubsFld.disabled = true;
+    adjUserBtn.disabled = true;
   }
 }
 
@@ -258,24 +438,36 @@ function handleGiveawayTick(newGiveawayData) {
 // =============================================================================
 
 
-/* Set up all of our handlers and kick the panel off; this will among other
- * things make sure that we're connected to the back end and that we're
- * listening for the appropriate events. */
-async function setup() {
-  // Get our configuration, and then use it to connect to the back end so
-  // that we can communicate with it and get events.
-  const config = await getConfig();
-  const socket = getWebSocket(location.hostname, config.socketPort, 'controls',
-                              trackConnectionState('connection-state'));
-
+/* Set up all of the required event handlers for all of the controls in the
+ * panel that can be interacted with by the user. This includes click handlers
+ * on buttons as well as input events on text fields.
+ *
+ * These event handlers are what drive the state changes in the UI controls to
+ * ensure that they are only enabled and availble if the required input is
+ * present.
+ *
+ * This ensures that the handlers for button clicks know that their input has
+ * been pre-sanitized and is safe to use without further checks, and provides
+ * visual feedback to the user that indicates why they can't take actions. */
+function setupControlEvents() {
   // The start button either starts a new giveaway or pauses the existing
   // one, depending on the current state.
   startBtn.addEventListener('click', () => startOrPauseGiveaway());
 
+  // The button for adjusting a giveaway grabs the text out of the duration
+  // adjustment field and uses it to tell the back end to make a change to the
+  // giveaway time.
+  adjGiveawayBtn.addEventListener('click', () => adjustGiveawayDuration());
+
+  // The button for adjusting a particular participant grabs the text out of the
+  // adjustment fields and sends it off to the back end to insert or update a
+  // record for the given user.
+  adjUserBtn.addEventListener('click', () => adjustGiveawayParticipant());
+
   // Every time the text in the duration field changes, check to see if the
   // value will parse and enable or disable the start button as appropriate
   durationFld.addEventListener('input', () => {
-    const duration = parse(durationFld.value);
+    const duration = parseAdjustmentDuration(durationFld.value);
     startBtn.disabled = (duration === null || duration < 1000);
   });
 
@@ -286,6 +478,35 @@ async function setup() {
     if (event.code === 'Enter' && startBtn.disabled === false) {
       startBtn.dispatchEvent(new Event('click', {}))
     }
+  });
+
+  // Every time the text in the duration adjustment field changes, check to see
+  // if the value will parse and enable or disable the adjustment button as
+  // appropriate
+  adjGiveawayFld.addEventListener('input', () => {
+    const duration = parseAdjustmentDuration(adjGiveawayFld.value);
+    adjGiveawayBtn.disabled = (duration === null || Math.abs(duration) < 1000);
+  });
+
+  // When new input is commited into the duration field, trigger a fake event
+  // on the start button. This won't fire while entering text, only when enter
+  // is pressed.
+  adjGiveawayFld.addEventListener('keydown', event => {
+    if (event.code === 'Enter' && adjGiveawayBtn.disabled === false) {
+      adjGiveawayBtn.dispatchEvent(new Event('click', {}))
+    }
+  });
+
+  // For all of the fields that are for adjusting the information for a
+  // particular user, check to see if the adjustment button should be enabled
+  // or not.
+  [adjUserNameFld, adjUserBitsFld, adjUserSubsFld].forEach(field => {
+    field.addEventListener('input', () => validateParicipantAdjustFields())
+    field.addEventListener('keydown', event => {
+      if (event.code === 'Enter' && adjUserBtn.disabled === false) {
+        adjUserBtn.dispatchEvent(new Event('click', {}))
+      }
+    })
   });
 
   // Whenever the cancel button is clicked, display the portion of the panel
@@ -311,6 +532,26 @@ async function setup() {
       window.fetch('/giveaway/cancel');
     }
   });
+
+}
+
+
+// =============================================================================
+
+
+/* Set up all of our handlers and kick the panel off; this will among other
+ * things make sure that we're connected to the back end and that we're
+ * listening for the appropriate events. */
+async function setup() {
+  // Get our configuration, and then use it to connect to the back end so
+  // that we can communicate with it and get events.
+  const config = await getConfig();
+  const socket = getWebSocket(location.hostname, config.socketPort, 'controls',
+                              trackConnectionState('connection-state'));
+
+  // Set up the event handlers for our panel controls, so that we can react to
+  // input appropriate.
+  setupControlEvents();
 
   // Whenever we get informed about a twitch authorization change, update the
   // controls in the panel as appropriate. This can do things like change the
