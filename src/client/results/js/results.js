@@ -37,6 +37,11 @@ const countdownTxt = document.getElementById('countdown-clock');
 const subListBox = document.getElementById('sub-list');
 const bitListBox = document.getElementById('bit-list');
 
+/* These the spans inside of the title div elements for each of the leaderboard
+ * titles, which we can use to indicate how many people are in each list. */
+const subCountListBox = document.getElementById('sub-board-count');
+const bitCountListBox = document.getElementById('bit-board-count');
+
 
 // =============================================================================
 
@@ -72,6 +77,9 @@ function handleAuthUpdate(authData) {
   // reset, since the user is no longer authorized.
   bitListBox.innerHTML = '';
   subListBox.innerHTML = '';
+  bitCountListBox.innerText = '';
+  subCountListBox.innerText = '';
+
   countdownTxt.innerText = 'No giveaway yet; hold tight!';
   countdownTxt.classList.remove('pause');
 }
@@ -163,6 +171,7 @@ function handleParticipantUpdate(config, eventName, updateData) {
   switch(eventName) {
     case 'bits':
       bitListBox.innerHTML = '';
+      bitCountListBox.innerText = ` (${updateData.length})`;
 
       updateData.forEach(gifter => {
         const div = divForGifter({ name: gifter.name, score: gifter.score });
@@ -172,6 +181,7 @@ function handleParticipantUpdate(config, eventName, updateData) {
 
     case 'subs':
       subListBox.innerHTML = '';
+      subCountListBox.innerText = ` (${updateData.length})`;
 
       updateData.forEach(gifter => {
         const div = divForGifter({ name: gifter.name, score: gifter.score });
